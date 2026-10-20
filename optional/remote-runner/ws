@@ -1,0 +1,274 @@
+#!/usr/bin/env python3
+"""ws - send signed commands to a remote machine (the "workshop") through a shared spool folder, and follow them.
+
+  ws ping
+  ws run [--class light|heavy|build|film] [--cwd DIR] [--env KIT_X=v]... [--detach] [--timeout S] [-q] [-n N] -- <cmd>
+  ws wait <id> [--timeout S] [-n N]
+  ws tail <id> [-f] [-n N] [--timeout S]
+  ws status [id]
+  ws kill <id>
+  ws pause | ws resume          the brain's switch (PAUSE_HQ) only; the owner's PAUSE switch is never touched
+  ws keygen <path>              write a new key file (mode 600, never overwrites, prints only the fingerprint)
+  ws --target <name> <command>  the same commands on another machine's spool (or KIT_WS_TARGET)
+
+Settings: the "remote" section of the kit config:
+  {"key_file": "{kit_home}/secrets/ws.key", "default_target": "box",
+   "targets": {"box": {"spool": "/mnt/share/ws/spool"}}, "wait_seconds": 540}
+KIT_WS_SPOOL and KIT_WS_KEY override them (tests). The daemon (ws_daemon.py) runs on the remote machine.
+`run` streams the output and waits at most wait_seconds (a tool call ends at 10 min), then prints the id
+and exits 124: continue with `ws wait <id>`. Use --detach for long jobs.
+Exit codes: the job's own; 124 still running; 125 daemon lost; 126 refused; 127 spool not reachable; 2 usage.
+"""
+import json
+import os
+import socket
+import sys
+import time
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "bin"))
+import ws_proto as P  # noqa: E402
+
+EXIT_RUNNING, EXIT_LOST, EXIT_REFUSED, EXIT_NOSPOOL, EXIT_USAGE = 124, 125, 126, 127, 2
+LOST_S = 20.0
+FINAL = ("done", "failed", "killed")
+
+
+def die(code, msg):
+    sys.stderr.write("ws: " + msg + "\n")
+    sys.exit(code)
+
+
+def settings(target):
+    remote = {}
+    try:
+        import kitconfig as K
+        remote = K.load().get("remote") or {}
+    except (ImportError, SystemExit):
+        pass
+    target = target or os.environ.get("KIT_WS_TARGET") or remote.get("default_target") or "default"
+    spool = os.environ.get("KIT_WS_SPOOL") or ((remote.get("targets") or {}).get(target) or {}).get("spool")
+    key_file = os.environ.get("KIT_WS_KEY") or remote.get("key_file")
+    if not spool or not key_file:
+        die(EXIT_USAGE, "no spool or key for target %r: add a \"remote\" section to the kit config "
+                        "(see optional/remote-runner/README.md)" % target)
+    return target, os.path.expanduser(spool), os.path.expanduser(key_file), float(remote.get("wait_seconds", 540))
+
+
+class Client(object):
+    def __init__(self, target=None):
+        self.target, self.spool, self.key_file, self.wait_s = settings(target)
+
+    def need_spool(self):
+        if not os.path.isdir(os.path.join(self.spool, "inbox")):
+            die(EXIT_NOSPOOL, "spool not reachable: %s/inbox is missing (is the share mounted and the daemon set "
+                              "up?)" % self.spool)
+
+    def key(self):
+        try:
+            return P.load_key(self.key_file)
+        except (OSError, ValueError) as e:
+            die(EXIT_USAGE, "cannot read the key file (%s): %s" % (self.key_file, e.__class__.__name__))
+
+    def jobdir(self, job_id):
+        if not P.ID_RE.match(job_id or ""):
+            die(EXIT_USAGE, "bad job id %r" % job_id)
+        return os.path.join(self.spool, "jobs", job_id)
+
+    def heartbeat(self):
+        return P.read_json(os.path.join(self.spool, "state", "heartbeat.json")) or {}
+
+    def alive(self):
+        return time.time() - float(self.heartbeat().get("t") or 0) < LOST_S
+
+    def submit(self, kind, **kw):
+        self.need_spool()
+        req = P.make_request(self.key(), kind, sender="%s@%s" % (os.environ.get("USER", "?"), socket.gethostname()), **kw)
+        P.write_atomic(os.path.join(self.spool, "inbox", req["id"] + ".json"), json.dumps(req) + "\n")
+        return req["id"]
+
+    def status(self, job_id):
+        return P.read_json(os.path.join(self.jobdir(job_id), "status.json"))
+
+    def rejected(self, job_id):
+        r = P.read_json(os.path.join(self.spool, "rejected", job_id + ".json"))
+        return r.get("reason") if r else None
+
+    def log_path(self, job_id):
+        return os.path.join(self.jobdir(job_id), "out.log")
+
+    def last_lines(self, job_id, n):
+        try:
+            with open(self.log_path(job_id), "rb") as f:
+                data = f.read()
+        except OSError:
+            return ""
+        lines = data.decode("utf-8", "replace").splitlines()
+        return "\n".join(lines[-n:]) if n else ""
+
+    def follow(self, job_id, timeout, stream, n=40):
+        """Wait for a final state; stream the log when asked. Returns the exit code."""
+        t0, pos = time.time(), 0
+        while True:
+            why = self.rejected(job_id)
+            if why:
+                die(EXIT_REFUSED, "job %s refused: %s" % (job_id, why))
+            st = self.status(job_id) or {}
+            if stream:
+                try:
+                    with open(self.log_path(job_id), "rb") as f:
+                        f.seek(pos)
+                        chunk = f.read()
+                        pos += len(chunk)
+                    if chunk:
+                        sys.stdout.write(chunk.decode("utf-8", "replace"))
+                        sys.stdout.flush()
+                except OSError:
+                    pass
+            if st.get("state") in FINAL:
+                if not stream and n:
+                    out = self.last_lines(job_id, n)
+                    if out:
+                        print(out)
+                code = int(st.get("code") if st.get("code") is not None else 1)
+                sys.stderr.write("ws: job %s %s, exit %d\n" % (job_id, st["state"], code))
+                return code
+            if time.time() - t0 > timeout:
+                sys.stderr.write("ws: job %s still %s after %ds; continue with: ws wait %s\n"
+                                 % (job_id, st.get("state", "waiting"), int(timeout), job_id))
+                return EXIT_RUNNING
+            if time.time() - t0 > 8 and not self.alive():
+                die(EXIT_LOST, "the daemon's heartbeat is older than %ds (daemon lost); job %s is %s"
+                    % (LOST_S, job_id, st.get("state", "not picked up")))
+            time.sleep(0.4)
+
+
+def parse_opts(args, flags, values):
+    """Tiny option parser: returns (opts, rest). Stops at '--'."""
+    opts, rest, i = {"env": []}, [], 0
+    while i < len(args):
+        a = args[i]
+        if a == "--":
+            rest += args[i + 1:]
+            break
+        if a in flags:
+            opts[a] = True
+        elif a in values:
+            if i + 1 >= len(args):
+                die(EXIT_USAGE, "%s needs a value" % a)
+            if a == "--env":
+                opts["env"].append(args[i + 1])
+            else:
+                opts[a] = args[i + 1]
+            i += 1
+        else:
+            rest.append(a)
+        i += 1
+    return opts, rest
+
+
+def num(v, what):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        die(EXIT_USAGE, "%s must be a number" % what)
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__)
+        return 0 if argv else EXIT_USAGE
+    target = None
+    if argv[0] == "--target":
+        if len(argv) < 3:
+            die(EXIT_USAGE, "usage: ws --target <name> <command> ...")
+        target, argv = argv[1], argv[2:]
+    cmd, args = argv[0], argv[1:]
+    if cmd == "keygen":
+        if len(args) != 1:
+            die(EXIT_USAGE, "usage: ws keygen <path>")
+        try:
+            print("new key written to %s (fingerprint %s); copy it to the remote machine yourself"
+                  % (args[0], P.write_new_key(os.path.expanduser(args[0]))))
+        except FileExistsError:
+            die(EXIT_USAGE, "%s exists: never overwritten" % args[0])
+        return 0
+    c = Client(target)
+    if cmd == "ping":
+        job = c.submit("ping")
+        t0 = time.time()
+        while time.time() - t0 < 10:
+            if c.rejected(job):
+                die(EXIT_REFUSED, "ping refused: %s (key mismatch?)" % c.rejected(job))
+            if (c.status(job) or {}).get("state") == "done":
+                hb = c.heartbeat()
+                print("pong from %s (target %s, key %s)" % (hb.get("host", "?"), c.target, hb.get("key", "?")))
+                return 0
+            time.sleep(0.3)
+        die(EXIT_LOST, "no answer in 10 s (daemon not running?)")
+    if cmd == "run":
+        opts, rest = parse_opts(args, ("--detach", "-q"), ("--class", "--cwd", "--env", "--timeout", "-n"))
+        if not rest:
+            die(EXIT_USAGE, "usage: ws run [options] -- <cmd>")
+        env = {}
+        for item in opts["env"]:
+            k, _, v = item.partition("=")
+            env[k] = v
+        job = c.submit("run", cmd=" ".join(rest), cls=opts.get("--class", "light"), cwd=opts.get("--cwd"), env=env)
+        if opts.get("--detach"):
+            print(job)
+            return 0
+        sys.stderr.write("ws: job %s submitted (%s)\n" % (job, opts.get("--class", "light")))
+        quiet = opts.get("-q")
+        n = int(num(opts.get("-n", 40), "-n"))
+        return c.follow(job, num(opts.get("--timeout", c.wait_s), "--timeout"), stream=not quiet, n=n)
+    if cmd == "wait":
+        opts, rest = parse_opts(args, (), ("--timeout", "-n"))
+        if len(rest) != 1:
+            die(EXIT_USAGE, "usage: ws wait <id>")
+        return c.follow(rest[0], num(opts.get("--timeout", c.wait_s), "--timeout"), stream=False,
+                        n=int(num(opts.get("-n", 40), "-n")))
+    if cmd == "tail":
+        opts, rest = parse_opts(args, ("-f",), ("--timeout", "-n"))
+        if len(rest) != 1:
+            die(EXIT_USAGE, "usage: ws tail <id> [-f]")
+        if opts.get("-f"):
+            return c.follow(rest[0], num(opts.get("--timeout", c.wait_s), "--timeout"), stream=True)
+        print(c.last_lines(rest[0], int(num(opts.get("-n", 40), "-n"))))
+        return 0
+    if cmd == "status":
+        c.need_spool()
+        if args:
+            st = c.status(args[0])
+            why = c.rejected(args[0])
+            print(json.dumps(st or {"id": args[0], "state": "rejected: " + why if why else "unknown"}, indent=1))
+            return 0
+        hb = c.heartbeat()
+        age = time.time() - float(hb.get("t") or 0)
+        print("target %s: daemon %s (heartbeat %ds ago, host %s, key %s)" % (
+            c.target, "alive" if age < LOST_S else "LOST", int(age), hb.get("host", "?"), hb.get("key", "?")))
+        print("running: %s" % (", ".join(hb.get("running") or []) or "none"))
+        print("queued/held: %s" % (", ".join(hb.get("queued") or []) or "none"))
+        print("pause: %s" % (hb.get("pause") or {}))
+        return 0 if age < LOST_S else EXIT_LOST
+    if cmd == "kill":
+        if len(args) != 1:
+            die(EXIT_USAGE, "usage: ws kill <id>")
+        c.jobdir(args[0])
+        job = c.submit("kill", target=args[0])
+        return c.follow(job, 30, stream=False, n=0)
+    if cmd in ("pause", "resume"):
+        c.need_spool()
+        flag = os.path.join(c.spool, "state", "PAUSE_HQ")
+        if cmd == "pause":
+            P.write_atomic(flag, "paused by %s at %s\n" % (os.environ.get("USER", "?"), time.strftime("%Y-%m-%d %H:%M")))
+        elif os.path.exists(flag):
+            os.remove(flag)
+        print("%s: PAUSE_HQ %s on %s" % (cmd, "set" if cmd == "pause" else "cleared", c.target))
+        return 0
+    die(EXIT_USAGE, "unknown command %r (ws --help)" % cmd)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

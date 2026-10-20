@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""brainlease - the brain lease: exactly one Claude session is the brain.
+
+  brainlease who                                    one line: who holds it, fresh/idle/stale
+  brainlease status                                 the lease as JSON, plus state and usage of every account
+  brainlease acquire [--account A] [--session S] [--force] [--reason R]
+                                                    take it (refused while another holder is fresh or idle,
+                                                    unless --force: only when the owner says so)
+  brainlease renew   [--session S]                  heartbeat (the brain hook does this on every tool call)
+  brainlease release [--session S] [--force]        give it up (brainwatch then starts nobody)
+
+--account defaults to the account of CLAUDE_CONFIG_DIR, --session to CLAUDE_CODE_SESSION_ID (both set inside
+a Claude Code session's Bash). Exit codes: 0 ok, 1 refused / not the holder, 2 usage error.
+Lease file: <paths.brain>/lease.json from the kit config (KIT_BRAIN_DIR moves it for tests).
+"""
+import argparse
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import brainlib as B  # noqa: E402
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="brainlease", description="Brain lease: one brain session at a time.",
+                                 epilog=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("cmd", choices=["acquire", "renew", "release", "status", "who"])
+    ap.add_argument("--account", default=None)
+    ap.add_argument("--session", default=None)
+    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--reason", default=None)
+    a = ap.parse_args()
+    acct = a.account or B.account_from_env()
+    sess = a.session or os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    if a.cmd == "who":
+        print(B.describe(B.read_lease()))
+        return 0
+    if a.cmd == "status":
+        lease = B.read_lease()
+        st, age, alive = B.lease_state(lease)
+        out = {"lease": lease, "state": st, "heartbeat_age_min": None if age is None else round(age / 60, 1),
+               "holder_process_alive": alive if st != "fresh" else None, "summary": B.describe(lease),
+               "accounts": {}}
+        for ac in B.ACCOUNTS:
+            u = B.usage(ac)
+            allowance = B.daily_allowance(u)
+            out["accounts"][ac] = {"usage": B.summary(u), "limit": B.at_limit(u),
+                                   "headroom": round(B.headroom(u), 1),
+                                   "daily_allowance": None if allowance is None else round(allowance, 1)}
+        if os.path.exists(B.PAUSED):
+            out["paused"] = "all accounts at their caps: see " + B.PAUSED
+        print(json.dumps(out, indent=1, default=str))
+        return 0
+    if a.cmd == "acquire" and acct not in B.ACCOUNTS:
+        print("brainlease: unknown account %r (one of %s)" % (acct, ", ".join(B.ACCOUNTS)), file=sys.stderr)
+        return 2
+    if not sess:
+        print("brainlease: no session id (pass --session or run inside a Claude Code session)", file=sys.stderr)
+        return 2
+    if a.cmd == "acquire":
+        ok, msg, lease = B.acquire(acct, sess, force=a.force, via="brainlease", reason=a.reason)
+        print(msg)
+        if ok and "renewed" not in msg:
+            B.activity({"from": acct, "dir": "send", "sid": sess[:8], "to": "brain", "kind": "brain lease",
+                        "what": msg + ((": " + a.reason) if a.reason else "")})
+        return 0 if ok else 1
+    if a.cmd == "renew":
+        ok = B.renew(sess)
+        print("renewed" if ok else "not the holder: " + B.describe(B.read_lease()))
+        return 0 if ok else 1
+    if a.cmd == "release":
+        ok, msg = B.release(sess, force=a.force)
+        print(msg)
+        if ok:
+            B.activity({"from": acct, "dir": "send", "sid": sess[:8], "to": "brain", "kind": "brain lease",
+                        "what": msg})
+        return 0 if ok else 1
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

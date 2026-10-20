@@ -1,0 +1,903 @@
+<title>Task Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{--bg:#f3f2ee;--panel:#fbfaf7;--fg:#22241f;--mute:#6c6f66;--line:#dddbd2;--accent:#3f6b5c;--ok:#4a7a5e;--warn:#96691d;--crit:#a2483d;--wash:#e8eee7;--overlay:#22241f66;--shadow:#22241f12;--clear:transparent;--model-light:#ffffff;--model-bounce:#777777;--display:"IBM Plex Sans",system-ui,sans-serif;--body:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161816;--panel:#1e211e;--fg:#e6e6df;--mute:#a4a79d;--line:#363b35;--accent:#79a997;--ok:#7fb08f;--warn:#d6a85a;--crit:#d17b6f;--wash:#28352d;--overlay:#00000099;--shadow:#00000030;--clear:transparent;--model-light:#ffffff;--model-bounce:#777777;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161816;--panel:#1e211e;--fg:#e6e6df;--mute:#a4a79d;--line:#363b35;--accent:#79a997;--ok:#7fb08f;--warn:#d6a85a;--crit:#d17b6f;--wash:#28352d;--overlay:#00000099;--shadow:#00000030;--clear:transparent;--model-light:#ffffff;--model-bounce:#777777;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--body)}button,select,textarea{font:inherit;color:inherit}button,select{min-height:38px}button{cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:7px 12px}button:hover:not(:disabled){border-color:var(--accent);background:var(--wash)}button:disabled,select:disabled{cursor:default;opacity:.5}a{color:var(--accent)}:focus-visible{outline:3px solid var(--accent);outline-offset:3px}h1,h2,h3,p{margin:0}button,select,textarea,a{touch-action:manipulation}button,select{max-width:100%}[hidden]{display:none!important}.ms{font-family:"Material Symbols Outlined";font-size:20px;font-weight:300;line-height:1;vertical-align:middle}.muted{color:var(--mute)}.count{font:500 12px var(--mono);font-variant-numeric:tabular-nums}.eyebrow{color:var(--accent);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}.wrap{max-width:1800px;margin:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:26px max(28px,env(safe-area-inset-bottom,0px));min-width:0}.top{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-bottom:24px}.top h1{font:600 clamp(25px,4vw,34px)/1.3 var(--display);margin:4px 0 7px}.top p{color:var(--mute);max-width:620px}.header-mark{display:grid;place-items:center;width:48px;height:48px;border:1px solid var(--line);border-radius:12px;color:var(--accent);flex:none}.header-mark .ms{font-size:28px}.tools{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);border-block:1px solid var(--line);padding-block:12px;display:grid;gap:10px}.tool-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}.chips{display:flex;gap:6px;flex-wrap:wrap;min-width:0}.chip-button{border-radius:99px;font-size:12px;min-height:34px;padding:5px 11px}.chip-button[aria-pressed="true"]{color:var(--accent);background:var(--wash);border-color:var(--accent)}.focus-label{font:500 9px var(--mono);letter-spacing:.06em;margin-left:5px}.checks{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--mute)}.checks label{display:flex;gap:7px;align-items:center;cursor:pointer;min-height:34px}input[type="checkbox"]{accent-color:var(--accent);width:16px;height:16px}.notice{margin-block:14px 0;display:flex;align-items:center;gap:9px;color:var(--mute);font-size:13px;min-height:26px;overflow-wrap:anywhere}.notice[data-tone="error"]{color:var(--crit)}.legend{font-size:12px;color:var(--mute)}.board-scroll{overflow-x:auto;overscroll-behavior-x:contain;margin-top:18px;padding-bottom:12px}.board{display:grid;grid-template-columns:repeat(5,minmax(260px,1fr));gap:14px;min-width:1360px;align-items:start}.column{min-width:0;border-radius:10px;background:var(--wash);padding:10px;border:1px solid var(--line)}.column-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 3px 13px}.column-head h2{font-size:13px;font-weight:600}.column-head .count{color:var(--mute)}.card-list{display:flex;flex-direction:column;gap:10px;min-height:150px}.column-empty{font-size:12px;color:var(--mute);padding:26px 8px;text-align:center;border:1px dashed var(--line);border-radius:7px;pointer-events:none}.card{border:1px solid var(--line);border-radius:8px;background:var(--panel);box-shadow:0 2px 5px var(--shadow);overflow:hidden;min-width:0}.card.focus{border-top:2px solid var(--accent)}.card-main{display:block;border:0;border-radius:0;min-height:0;width:100%;padding:14px;text-align:left;background:var(--clear)}.card-main:hover:not(:disabled){background:var(--clear)}.card h3{font-weight:600;font-size:14px;line-height:1.45;margin:9px 0 7px;overflow-wrap:anywhere}.card .why{font-size:12px;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}.tags{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.tag{font-size:10px;line-height:1.5;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute);overflow-wrap:anywhere;max-width:100%}.tag.focus-tag{color:var(--accent);border-color:var(--accent)}.tag.paused{color:var(--warn);border-color:var(--warn)}.tag.running{color:var(--ok);border-color:var(--ok);font-weight:600}
+.tag.account{color:var(--fg);border-color:var(--accent);display:inline-flex;align-items:center;gap:3px}
+.tag.account .ms{font-size:12px;line-height:1}.live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px;vertical-align:middle;animation:livepulse 1.6s ease-in-out infinite}@keyframes livepulse{0%,100%{opacity:1}50%{opacity:.3}}@media (prefers-reduced-motion:reduce){.live-dot{animation:none}}.live{font-size:12px;line-height:1.4;color:var(--ok);margin:6px 0 0;overflow-wrap:anywhere}.card.is-running{border-color:var(--ok)}.progress-date{display:flex;justify-content:space-between;gap:6px;margin-top:12px;font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums}.drag-handle{cursor:grab;touch-action:none;color:var(--mute);border:0;background:var(--clear);padding:5px;min-height:30px;min-width:30px}.card-actions{display:flex;align-items:center;gap:5px;padding:7px 9px;border-top:1px solid var(--line);background:var(--bg)}.move-field{flex:1;min-width:0;display:flex;align-items:center;gap:5px}.move-field label{font-size:10px;color:var(--mute);white-space:nowrap}.move-field select{min-width:0;width:100%;border:1px solid var(--line);border-radius:5px;background:var(--panel);padding:4px;font-size:11px}.small-button{padding:4px;min-width:32px;min-height:36px;flex:none}.small-button .ms{font-size:18px}.sortable-ghost{opacity:.35}.sortable-chosen{border-color:var(--accent)}.empty{border:1px dashed var(--line);border-radius:12px;text-align:center;padding:42px 20px;margin-top:20px;background:var(--panel)}.empty .ms{font-size:36px;color:var(--accent);margin-bottom:12px}.empty h2{font:600 21px var(--display);margin-bottom:10px}.empty p{color:var(--mute);max-width:490px;margin:auto;font-size:14px}.empty small{display:block;margin-top:12px;color:var(--mute)}.mobile-tabs{display:none}.footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:18px;color:var(--mute);font-size:11px}.sheet{position:fixed;margin:0 0 0 auto;inset:0 0 0 auto;width:min(760px,100%);height:100%;max-width:100%;max-height:100%;border:0;border-left:1px solid var(--line);background:var(--panel);color:var(--fg);padding:0;box-shadow:-10px 0 40px var(--shadow)}.sheet::backdrop{background:var(--overlay)}.sheet-inner{padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px));padding-block:22px max(30px,env(safe-area-inset-bottom,0px));overflow-wrap:anywhere}.sheet-top{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--panel);padding:14px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.sheet-top p{font-size:11px;color:var(--mute)}.sheet-title{font:600 24px/1.4 var(--display);margin:12px 0 24px}.detail-section{padding-block:18px;border-top:1px solid var(--line)}.detail-section h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}.detail-section p,.detail-section li{font-size:14px;white-space:pre-wrap}.detail-section ol,.detail-section ul{padding-left:23px;margin:0}.detail-section li+li{margin-top:8px}.source{font:11px/1.6 var(--mono);margin-top:10px;color:var(--mute);white-space:pre-wrap}.dep-link{padding:0;border:0;min-height:34px;background:var(--clear);color:var(--accent);text-align:left;text-decoration:underline}.note-field{width:100%;resize:vertical;min-height:130px;display:block;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:7px}.note-label{display:block;margin-bottom:8px;font-size:13px}.note-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}.note-toolbar span{font-size:12px;color:var(--mute)}.primary{background:var(--accent);color:var(--panel);border-color:var(--accent)}.primary:hover:not(:disabled){background:var(--accent);color:var(--panel);opacity:.9}.brief-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.brief-toolbar h3{margin:0}.brief-content{font-size:14px}.brief-content h1{font:600 23px/1.4 var(--display)}.brief-content h2{font-size:18px;margin:25px 0 10px}.brief-content h3{font-size:15px;text-transform:none;letter-spacing:0;color:var(--fg);margin:18px 0 8px}.brief-content p{white-space:normal;margin:10px 0}.brief-content pre{overflow-x:auto;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:6px}.brief-content code{font:12px var(--mono)}.brief-content blockquote{margin-inline:0;padding-left:14px;border-left:2px solid var(--accent);color:var(--mute)}.brief-content img{display:none}.brief-content table{display:block;overflow:auto;border-collapse:collapse}.brief-content td,.brief-content th{padding:6px;border:1px solid var(--line)}.copy-fallback{width:100%;min-height:190px;background:var(--bg);border:1px solid var(--line);padding:10px;font:12px var(--mono);color:var(--fg)}.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:700px){.wrap{padding-block:18px max(24px,env(safe-area-inset-bottom,0px))}.top{padding-bottom:18px;gap:10px}.top p{font-size:13px}.header-mark{display:none}.tools{padding-block:10px}.legend{display:none}.mobile-tabs{display:flex;overflow-x:auto;gap:4px;margin-top:15px;padding:3px 2px 8px;max-width:100%}.mobile-tabs button{flex:0 0 auto;font-size:12px;padding:8px}.mobile-tabs button[aria-selected="true"]{border-color:var(--accent);color:var(--accent);background:var(--wash)}.mobile-tabs .count{font-size:10px;margin-left:4px}.board-scroll{margin-top:5px;overflow:visible}.board{display:block;min-width:0}.column{display:none}.column.active{display:block}.column-head{padding-bottom:12px}.card-list{min-height:100px}.drag-handle{display:none}.move-field select{font-size:13px;min-height:40px}.small-button{min-width:40px;min-height:40px}.card h3{font-size:16px}.card .why{font-size:13px}.card-actions{gap:7px}.empty{padding:30px 16px}.sheet-inner{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}.sheet-top{padding-inline:16px}.sheet-title{font-size:22px}.checks{gap:12px}.notice{font-size:12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+.hub-tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px;max-width:100%}.hub-tabs button{flex:1;max-width:180px;display:flex;align-items:center;justify-content:center;gap:8px}.hub-tabs [aria-selected="true"]{background:var(--wash);border-color:var(--accent);color:var(--accent)}.hub-panel{min-width:0}.library-tools .chip-button{overflow-wrap:anywhere;min-width:0}.library-tools{display:grid;gap:12px;margin-block:18px}.search-field{display:grid;gap:5px;max-width:540px;min-width:0}.search-field label{font-size:12px;color:var(--mute)}.search-field input{width:100%;min-width:0;font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:10px}.hub-heading{font:600 23px/1.4 var(--display);margin-block:22px 12px}.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:14px}.media-card{display:block;min-width:0;width:100%;padding:0;overflow:hidden;text-align:left}.media-thumb{position:relative;aspect-ratio:4/3;display:grid;place-items:center;background:var(--wash);overflow:hidden}.media-thumb img{width:100%;height:100%;object-fit:cover;display:block}.media-play{position:absolute;inset:auto 10px 10px auto;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:4px 8px;font:12px var(--mono);display:flex;align-items:center;gap:4px}.media-label{display:block;padding:12px;overflow-wrap:anywhere}.media-label strong{display:block;font-size:14px}.media-label small{color:var(--mute)}.hub-state{margin-top:18px}.goals-now{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:18px;overflow-wrap:anywhere}.goals-now p{margin-top:8px}.goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}.goal-card{padding:20px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0;overflow-wrap:anywhere}.goal-card h3{font:600 20px/1.4 var(--display);margin-block:10px}.goal-card p{margin-block:10px;white-space:pre-line}.goal-why{color:var(--mute);font-size:13px}.goal-card details{border-top:1px solid var(--line);padding-top:12px;margin-top:16px}.goal-card summary{cursor:pointer;color:var(--accent);min-height:38px}.goal-card ul{padding-left:20px}.goal-card li{margin-block:12px}.goal-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.goal-links button{color:var(--accent);font:12px var(--mono);min-height:38px}.goal-status.active{color:var(--accent);border-color:var(--accent)}.goal-status.done{color:var(--ok);border-color:var(--ok)}.goal-status.paused{color:var(--warn);border-color:var(--warn)}.media-viewer{inset:0;margin:auto;width:min(1100px,100%);max-width:100%;max-height:100%;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--fg)}.media-viewer::backdrop{background:var(--overlay)}.viewer-top{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;padding-block:12px}.viewer-controls{display:flex;gap:6px}.viewer-stage{min-height:120px;background:var(--bg);display:grid;place-items:center}.viewer-stage img,.viewer-stage video{display:block;max-width:100%;max-height:65dvh;object-fit:contain}.viewer-facts{padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-wrap:anywhere}.viewer-facts h2{font:600 22px/1.4 var(--display);margin-bottom:8px}.viewer-facts p{margin-block:8px;white-space:pre-line}.original-path{user-select:text;font:12px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}.viewer-error{padding:12px;color:var(--crit)}
+.hub-tabs button{min-width:0;padding-inline:8px;gap:6px}.models-layout{display:grid;grid-template-columns:minmax(200px,280px) minmax(0,1fr);gap:20px;margin-top:20px}.model-browser{display:grid;align-content:start;gap:10px;min-width:0}.model-browser>label{font-size:12px}.model-browser select{width:100%;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px;font:13px var(--body)}.model-browser option{padding:7px;overflow:hidden;text-overflow:ellipsis}.model-view{min-width:0;overflow-wrap:anywhere}.model-stage{position:relative;width:100%;height:clamp(300px,50vw,620px);background:var(--wash);border:1px solid var(--line);border-radius:10px;overflow:hidden}.model-stage canvas{display:block;width:100%;height:100%;touch-action:none}.model-state{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:24px;background:var(--panel);color:var(--mute);pointer-events:none;overflow-wrap:anywhere}.model-state[data-error="true"]{color:var(--crit)}.model-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-block:12px}.model-toolbar label{font-size:12px;color:var(--mute)}.model-toolbar select{min-width:0;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px;flex:1 1 130px}.model-scale{font-size:12px;margin-top:10px}@media(max-width:700px){.models-layout{grid-template-columns:minmax(0,1fr)}.model-browser select{height:180px}.hub-tabs{gap:5px}.hub-tabs button{font-size:13px}.hub-tabs .ms{font-size:18px}}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,300,0,0&amp;display=block">
+<main class="wrap">
+  <header class="top"><div><div id="board-eyebrow" class="eyebrow">Project tickets</div><h1 id="board-title">Task Board</h1><p id="board-intro">Every task for the project, from our decisions. Move work forward, set its priority, and leave a clear handoff for the next session.</p></div><div class="header-mark" aria-hidden="true"><span class="ms">view_kanban</span></div></header>
+  <nav id="hub-tabs" class="hub-tabs" role="tablist" aria-label="Project hub">
+    <button id="hub-tab-tasks" role="tab" aria-selected="true" aria-controls="panel-tasks" data-hub="tasks"><span class="ms" aria-hidden="true">view_kanban</span>Tasks</button>
+    <button id="hub-tab-media" role="tab" aria-selected="false" aria-controls="panel-media" tabindex="-1" data-hub="media"><span class="ms" aria-hidden="true">perm_media</span>Media</button>
+    <button id="hub-tab-goals" role="tab" aria-selected="false" aria-controls="panel-goals" tabindex="-1" data-hub="goals"><span class="ms" aria-hidden="true">flag</span>Goals</button>
+    <button id="hub-tab-3d" role="tab" aria-selected="false" aria-controls="panel-3d" tabindex="-1" data-hub="3d"><span class="ms" aria-hidden="true">view_in_ar</span>3D</button>
+  </nav>
+  <section id="panel-tasks" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-tasks">
+  <p id="goal-link-status" class="notice" role="status" hidden></p>
+  <section class="tools" aria-label="Board filters"><div class="tool-row"><div id="track-filters" class="chips" aria-label="Track filters"><button id="track-all" class="chip-button" aria-pressed="true">All tracks</button></div><span id="total-count" class="count">0 tasks</span></div><div class="tool-row"><div class="checks"><label for="filter-waiting"><input type="checkbox" id="filter-waiting">Waiting on me</label><label for="filter-paused"><input type="checkbox" id="filter-paused">Hide paused</label></div><span class="legend">Higher in a column = higher priority</span></div></section>
+  <p id="connection" class="notice" role="status" aria-live="polite"><span class="ms" aria-hidden="true">database</span><span id="connection-text">Connecting to the shared database…</span></p>
+  <section id="empty-state" class="empty"><span class="ms" aria-hidden="true">view_kanban</span><h2>A clear place for the next move</h2><p>This board fills from the shared database. The brain adds the task cards after publishing; your priorities and notes then stay with the board.</p><small id="empty-caption">Waiting for database cards. No sample tasks are stored in this page.</small></section>
+  <nav id="mobile-tabs" class="mobile-tabs" role="tablist" aria-label="Board columns"></nav>
+  <div class="board-scroll"><div id="board" class="board" aria-label="Task board"></div></div>
+  <footer class="footer"><span>Shared priorities · explicit notes · complete handoffs</span><span>Move with the select or arrows. Drag with the grip.</span></footer>
+  </section>
+  <section id="panel-media" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-media" hidden>
+    <h2 class="hub-heading">Media library</h2><p class="muted">Images, recordings, concepts and renders, kept together.</p>
+    <div class="library-tools"><div id="media-kinds" class="chips" aria-label="Media type"><button id="media-kind-all" class="chip-button" data-kind="all" aria-pressed="true">All</button><button id="media-kind-image" class="chip-button" data-kind="image" aria-pressed="false">Images</button><button id="media-kind-video" class="chip-button" data-kind="video" aria-pressed="false">Videos</button></div><div id="media-topics" class="chips" aria-label="Media topics"></div><div class="search-field"><label for="media-search">Search titles and captions</label><input id="media-search" type="search" placeholder="Find a concept or recording…"></div><p id="media-count" class="count" role="status"></p></div>
+    <div id="media-state" class="empty hub-state" role="status">The library is being built.</div><div id="media-content"></div>
+  </section>
+  <section id="panel-goals" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-goals" hidden>
+    <div id="goals-now" class="goals-now" hidden><div class="eyebrow">Now</div><p id="goals-now-text"></p><small id="goals-generated" class="muted"></small></div>
+    <div id="goals-state" class="empty hub-state" role="status">The goals are being gathered.</div><div id="goals-content"></div>
+  </section>
+  <section id="panel-3d" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-3d" hidden>
+    <h2 class="hub-heading">3D library</h2><p class="muted">Explore the project's models. Drag to orbit, pinch or scroll to zoom.</p>
+    <div class="models-layout">
+      <div class="model-browser">
+        <div class="search-field"><label for="model-search">Search models</label><input id="model-search" type="search" placeholder="Find a model…"></div>
+        <label for="model-picker" class="muted">Choose a model</label>
+        <select id="model-picker" size="12" aria-describedby="model-count"><option value="" disabled selected>Loading the library…</option></select>
+        <p id="model-count" class="count" role="status"></p>
+      </div>
+      <div class="model-view">
+        <div id="model-stage" class="model-stage" aria-busy="false">
+          <canvas id="model-canvas" aria-label="Interactive 3D model. Use the pointer to orbit and zoom." tabindex="0"></canvas>
+          <p id="model-state" class="model-state" role="status">Choose a model to open its 3D view.</p>
+        </div>
+        <div class="model-toolbar">
+          <button id="model-frame" disabled><span class="ms" aria-hidden="true">center_focus_strong</span> Frame model</button>
+          <label for="model-clip">Animation</label><select id="model-clip" disabled><option value="">No animation</option></select>
+          <button id="model-play" aria-pressed="false" disabled><span class="ms" aria-hidden="true">play_arrow</span> Play</button>
+          <button id="model-retry" hidden>Retry loading</button>
+        </div>
+        <h3 id="model-title">No model selected</h3><p id="model-facts" class="muted"></p>
+        <p class="muted model-scale">Grid squares are 1 m. The standing figure is 1.8 m tall. Animations start paused.</p>
+      </div>
+    </div>
+  </section>
+  <p id="announcement" class="sr-only" aria-live="polite"></p>
+</main>
+<dialog id="media-viewer" class="media-viewer" aria-labelledby="viewer-title"><div class="viewer-top"><span id="viewer-position" class="count"></span><div class="viewer-controls"><button id="viewer-prev" aria-label="Previous media"><span class="ms" aria-hidden="true">chevron_left</span></button><button id="viewer-next" aria-label="Next media"><span class="ms" aria-hidden="true">chevron_right</span></button><button id="viewer-close" aria-label="Close media viewer"><span class="ms" aria-hidden="true">close</span></button></div></div><div id="viewer-stage" class="viewer-stage"></div><p id="viewer-error" class="viewer-error" role="status" hidden></p><div class="viewer-facts"><h2 id="viewer-title"></h2><p id="viewer-date" class="muted"></p><p id="viewer-caption"></p><p class="muted">Original path</p><div id="viewer-path" class="original-path" tabindex="0"></div></div></dialog>
+<dialog id="detail-sheet" class="sheet" aria-labelledby="detail-title"><div class="sheet-top"><div><div class="eyebrow">Task &amp; handoff</div><p id="detail-position"></p></div><button id="close-sheet" aria-label="Close task details"><span class="ms" aria-hidden="true">close</span></button></div><div class="sheet-inner"><div id="detail-tags" class="tags"></div><h2 id="detail-title" class="sheet-title"></h2><div id="detail-facts"></div><section class="detail-section"><h3>Your direction</h3><label class="note-label" for="owner-note">Owner note</label><textarea id="owner-note" class="note-field" placeholder="Decisions, priorities, or a note for the next session…" disabled></textarea><div class="note-toolbar"><span id="note-status" role="status">Notes save only when you press Save.</span><button id="save-note" class="primary" disabled>Save note</button></div></section><section id="assign-section" class="detail-section"><h3>Assign and start</h3><label class="note-label" for="assign-who">Who works on it</label><div class="note-toolbar"><select id="assign-who" disabled><option value="brain">The brain itself</option></select><button id="start-work" class="primary" disabled><span class="ms" aria-hidden="true">play_arrow</span> Start</button></div><p id="assign-status" class="muted" role="status">Moves the card to In progress and tells the brain. The brain checks that account's limit and that no other worker is using the same code, then starts it.</p></section><section class="detail-section"><div class="brief-toolbar"><h3>Full handoff brief</h3><button id="copy-brief" disabled><span class="ms" aria-hidden="true">content_copy</span> Copy brief</button></div><p id="brief-status" class="muted" role="status">Brief not written yet.</p><div id="brief-content" class="brief-content"></div><label id="copy-fallback-label" for="copy-fallback" hidden>Copy the selected Markdown text:</label><textarea id="copy-fallback" class="copy-fallback" readonly hidden></textarea></section></div></dialog>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script>
+'use strict';
+// PURE_START — exercised by the offline tests directly from this page.
+// Board settings. board/build.py replaces this block with board.config.json; keep the markers.
+const BOARD_CONFIG = /* BOARD_CONFIG_START */{
+  "title": "Task Board",
+  "eyebrow": "Project tickets",
+  "intro": "Every task for the project, from our decisions. Move work forward, set its priority, and leave a clear handoff for the next session.",
+  "focusTrack": "",
+  "tabs": {"media": true, "goals": true, "3d": false},
+  "assignees": [
+    {"value": "main · worker", "label": "Main · worker"},
+    {"value": "second · worker", "label": "Second · worker"},
+    {"value": "shared · worker", "label": "Shared · worker"},
+    {"value": "Codex", "label": "Codex"},
+    {"value": "API key", "label": "API key (paid)"},
+    {"value": "main · brain", "label": "The brain itself"}
+  ],
+  "goalGroups": ["vision", "goal order", "milestones", "systems"],
+  "modelGroups": ["Buildings", "Characters", "Props", "Details"],
+  "storageKey": "task-board-view-v1"
+}/* BOARD_CONFIG_END */;
+const COLUMNS = [['pipeline','Pipeline'],['todo','To do'],['doing','In progress'],['review','In review'],['done','Done']];
+const columnName = id => (COLUMNS.find(column => column[0] === id) || COLUMNS[0])[1];
+function ordered(cards, column) {
+  return cards.filter(card => card.column === column).slice().sort((a,b) => (a.order - b.order) || a.id.localeCompare(b.id));
+}
+function moveCards(cards, id, target, index) {
+  const card = cards.find(item => item.id === id);
+  if (!card || !COLUMNS.some(column => column[0] === target)) return [];
+  const source = ordered(cards, card.column);
+  const destination = ordered(cards, target).filter(item => item.id !== id);
+  const position = Math.max(0, Math.min(index, destination.length));
+  destination.splice(position, 0, {...card, column:target});
+  if (target === card.column && source.every((item,i) => item.id === destination[i].id)) return [];
+  const groups = target === card.column ? [destination] : [source.filter(item => item.id !== id), destination];
+  return groups.flatMap(group => group.map((item,order) => ({id:item.id,column:item.column,order})))
+    .filter(item => { const old = cards.find(card => card.id === item.id); return old.column !== item.column || old.order !== item.order; });
+}
+function moveToColumn(cards, id, target) {
+  const card = cards.find(item => item.id === id);
+  return !card || card.column === target ? [] : moveCards(cards,id,target,ordered(cards,target).length);
+}
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function safeURL(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  try { const url = new URL(value, location.href); return ['https:','http:','mailto:'].includes(url.protocol) ? url.href : null; } catch { return null; }
+}
+const HUB_TABS = ['tasks',...['media','goals','3d'].filter(tab => BOARD_CONFIG.tabs && BOARD_CONFIG.tabs[tab])];
+const GOAL_GROUPS = Array.isArray(BOARD_CONFIG.goalGroups) ? BOARD_CONFIG.goalGroups : [];
+const GOAL_STATUSES = ['done','active','next','paused','later'];
+function hubTab(hash, saved) {
+  const requested = String(hash || '').replace(/^#/, '');
+  return HUB_TABS.includes(requested) ? requested : HUB_TABS.includes(saved) ? saved : 'tasks';
+}
+function mediaURL(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  try { const url = new URL(value,location.href); return ['http:','https:'].includes(url.protocol) && url.origin === new URL(location.href).origin ? url.href : null; } catch { return null; }
+}
+function parseMedia(data) {
+  if (!data || !Array.isArray(data.items)) throw new Error('Invalid media library');
+  const seen = new Set();
+  return data.items.filter(item => {
+    if (!item || typeof item.id !== 'string' || !item.id || seen.has(item.id) || !['image','video'].includes(item.kind) || !mediaURL(item.file)) return false;
+    seen.add(item.id); return true;
+  }).map(item => ({...item,title:typeof item.title === 'string' && item.title.trim() ? item.title : item.id,
+    caption:typeof item.caption === 'string' ? item.caption : '',topic:typeof item.topic === 'string' && item.topic.trim() ? item.topic : 'Unsorted',
+    date:typeof item.date === 'string' ? item.date : '',orig_path:typeof item.orig_path === 'string' ? item.orig_path : ''}))
+    .sort((a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0) || a.id.localeCompare(b.id));
+}
+function filterMedia(items,kind,topic,search) {
+  const query = String(search || '').trim().toLowerCase();
+  return items.filter(item => (kind === 'all' || item.kind === kind) && (!topic || item.topic === topic) && (!query || (item.title + ' ' + item.caption).toLowerCase().includes(query)));
+}
+function mediaStep(items,id,delta) {
+  const index = items.findIndex(item => item.id === id), next = index + delta;
+  return index >= 0 && next >= 0 && next < items.length ? items[next].id : null;
+}
+function durationLabel(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return 'Video';
+  const value = Math.floor(seconds); return Math.floor(value/60) + ':' + String(value%60).padStart(2,'0');
+}
+function parseGoals(data) {
+  if (!data || !Array.isArray(data.goals)) throw new Error('Invalid goals');
+  const seen = new Set();
+  return data.goals.filter(goal => {
+    if (!goal || typeof goal.id !== 'string' || !goal.id || seen.has(goal.id) || !GOAL_GROUPS.includes(goal.group)) return false;
+    seen.add(goal.id); return true;
+  }).map(goal => ({...goal,status:GOAL_STATUSES.includes(goal.status) ? goal.status : 'later'}));
+}
+const MODEL_GROUPS = Array.isArray(BOARD_CONFIG.modelGroups) ? BOARD_CONFIG.modelGroups : [];
+function parseModelIndex(data) {
+  if (!data || !Array.isArray(data.models)) throw new Error('Invalid 3D index');
+  const seen = new Set();
+  return data.models.map(item => {
+    if (!item || !/^[a-zA-Z0-9_-]+$/.test(item.id) || seen.has(item.id) || typeof item.name !== 'string' || !MODEL_GROUPS.includes(item.group) || !/^models3d\/[a-zA-Z0-9_-]+\.json$/.test(item.bundle) || !Array.isArray(item.clips) || !item.clips.every(clip => typeof clip === 'string') || !Number.isInteger(item.tris) || item.tris < 0) throw new Error('Invalid 3D model entry');
+    seen.add(item.id); return item;
+  });
+}
+function filterModels(items,search) {
+  const query = String(search || '').trim().toLowerCase();
+  return items.filter(item => !query || (item.name + ' ' + item.id + ' ' + item.group).toLowerCase().includes(query));
+}
+function parseModelBundle(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data) || !Object.keys(data).length) throw new Error('Invalid 3D bundle');
+  for (const [id,item] of Object.entries(data)) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(id) || !item || typeof item.name !== 'string' || !MODEL_GROUPS.includes(item.group) || typeof item.bin !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(item.bin) || item.bin.length % 4 || !Array.isArray(item.clips) || !item.clips.every(clip => typeof clip === 'string') || !Array.isArray(item.size_m) || item.size_m.length !== 3 || !item.size_m.every(value => Number.isFinite(value) && value >= 0)) throw new Error('Invalid 3D bundle model');
+  }
+  return data;
+}
+function createModelBundles(fetcher) {
+  const cache = new Map();
+  return async file => {
+    if (!/^models3d\/[a-zA-Z0-9_-]+\.json$/.test(file)) throw new Error('Invalid 3D bundle path');
+    if (!cache.has(file)) {
+      const pending = (async () => {
+        const response = await fetcher(file,{credentials:'same-origin'});
+        if (!response.ok) throw new Error('Bundle file ' + response.status);
+        return parseModelBundle(await response.json());
+      })();
+      cache.set(file,pending);
+      pending.catch(() => { if (cache.get(file) === pending) cache.delete(file); });
+    }
+    return cache.get(file);
+  };
+}
+// Convert the complete GLB stored in a bundle into the working viewer's _bin document.
+function modelDocument(base64) {
+  const raw = atob(base64), bytes = new Uint8Array(raw.length);
+  for (let i=0;i<raw.length;i++) bytes[i] = raw.charCodeAt(i);
+  if (bytes.length < 28) throw new Error('Incomplete GLB');
+  const dv = new DataView(bytes.buffer), jsonLength = dv.getUint32(12,true), offset = 20 + jsonLength;
+  if (dv.getUint32(0,true) !== 0x46546C67 || dv.getUint32(4,true) !== 2 || dv.getUint32(8,true) !== bytes.length || dv.getUint32(16,true) !== 0x4E4F534A || offset+8 > bytes.length || dv.getUint32(offset+4,true) !== 0x004E4942 || offset+8+dv.getUint32(offset,true) !== bytes.length) throw new Error('Invalid GLB');
+  const doc = JSON.parse(new TextDecoder().decode(bytes.subarray(20,offset)));
+  const bin = bytes.subarray(offset+8), chunks = [];
+  for (let i=0;i<bin.length;i+=8192) chunks.push(String.fromCharCode(...bin.subarray(i,i+8192)));
+  doc._bin = btoa(chunks.join(''));
+  return doc;
+}
+// Rebuild a GLB from the _bin document, including 4-byte padding.
+function toGlb(js) {
+  const b64 = js._bin; delete js._bin;
+  const raw = atob(b64), bin = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i);
+  let jsonBytes = new TextEncoder().encode(JSON.stringify(js));
+  const jsonLen = (jsonBytes.length + 3) & ~3, binLen = (bin.length + 3) & ~3;
+  const out = new Uint8Array(12 + 8 + jsonLen + 8 + binLen), dv = new DataView(out.buffer);
+  dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, out.length, true);
+  dv.setUint32(12, jsonLen, true); dv.setUint32(16, 0x4E4F534A, true);
+  out.fill(0x20, 20, 20 + jsonLen); out.set(jsonBytes, 20);
+  const o = 20 + jsonLen;
+  dv.setUint32(o, binLen, true); dv.setUint32(o + 4, 0x004E4942, true); out.set(bin, o + 8);
+  return out.buffer;
+}
+function disposeModel(root,mixer) {
+  if (!root) return;
+  if (mixer) { mixer.stopAllAction(); mixer.uncacheRoot(root); }
+  const geometries = new Set(), materials = new Set(), textures = new Set(), images = new Set();
+  root.traverse(object => {
+    if (object.geometry) geometries.add(object.geometry);
+    if (object.skeleton?.boneTexture) textures.add(object.skeleton.boneTexture);
+    for (const material of Array.isArray(object.material) ? object.material : object.material ? [object.material] : []) materials.add(material);
+  });
+  for (const material of materials) {
+    for (const value of Object.values(material)) if (value?.isTexture) textures.add(value);
+    material.dispose();
+  }
+  for (const texture of textures) { if (texture.image?.close) images.add(texture.image); texture.dispose(); }
+  for (const image of images) image.close();
+  for (const geometry of geometries) geometry.dispose();
+}
+function createModelSession(loader,scene,makeMixer) {
+  let current = null, mixer = null, generation = 0;
+  function release() {
+    if (current) { scene.remove(current.scene); disposeModel(current.scene,mixer); }
+    current = null; mixer = null;
+  }
+  return {
+    get current() { return current; }, get mixer() { return mixer; },
+    clear() { generation++; release(); },
+    async show(getBytes) {
+      const ticket = ++generation; release();
+      const bytes = await getBytes();
+      if (ticket !== generation) return null;
+      const loaded = await new Promise((resolve,reject) => loader.parse(bytes,'',resolve,reject));
+      if (ticket !== generation) { disposeModel(loaded.scene); return null; }
+      current = loaded; mixer = loaded.animations.length ? makeMixer(loaded.scene) : null;
+      scene.add(loaded.scene); return loaded;
+    }
+  };
+}
+
+// PURE_END
+const $ = id => document.getElementById(id);
+const asText = value => typeof value === 'string' ? value : value == null ? '' : JSON.stringify(value);
+const asList = value => Array.isArray(value) ? value.map(asText) : [];
+const prefsKey = typeof BOARD_CONFIG.storageKey === 'string' && BOARD_CONFIG.storageKey ? BOARD_CONFIG.storageKey : 'task-board-view-v1';
+let prefs = {};
+let briefBundle = null;  // all briefs ship as ONE published file (briefs.json): fewer files per published version
+try { prefs = JSON.parse(localStorage.getItem(prefsKey) || '{}') || {}; } catch {}
+let activeTrack = typeof prefs.track === 'string' ? prefs.track : '';
+let activeTab = COLUMNS.some(item => item[0] === prefs.tab) ? prefs.tab : 'todo';
+let activeHub = hubTab(location.hash,prefs.hub);
+let comments = null;
+let cards = [], db = null, writeAllowed = false, viewerId = null, busy = false, dragging = false, unsubscribe = null, sorts = [];
+let detailId = null, detailOrigin = null, briefText = '', briefRequest = 0;
+let connectionState = 'Connecting to the shared database…', connectionError = false;
+const drafts = new Map();
+$('filter-waiting').checked = prefs.waiting === true;
+$('filter-paused').checked = prefs.hidePaused === true;
+function savePreferences() {
+  try { localStorage.setItem(prefsKey,JSON.stringify({track:activeTrack,tab:activeTab,hub:activeHub,waiting:$('filter-waiting').checked,hidePaused:$('filter-paused').checked})); } catch {}
+}
+function notice(message, error = false) {
+  connectionState = message; connectionError = error;
+  $('connection-text').textContent = message;
+  $('connection').dataset.tone = error ? 'error' : '';
+}
+function announce(message) { $('announcement').textContent = message; }
+function normalize(doc) {
+  const raw = doc.data() || {};
+  return {...raw,id:doc.id,title:asText(raw.title) || doc.id,track:asText(raw.track) || 'Unassigned',
+    column:COLUMNS.some(item => item[0] === raw.column) ? raw.column : 'pipeline',order:Number.isFinite(raw.order) ? raw.order : 1e9,
+    how:asList(raw.how),depends_on:asList(raw.depends_on),open_questions:asList(raw.open_questions),owner_note:asText(raw.owner_note)};
+}
+function visible(card) {
+  return (!activeTrack || card.track === activeTrack) && (!$('filter-waiting').checked || card.open_questions.length > 0) && (!$('filter-paused').checked || !card.paused);
+}
+function dateLabel(value) {
+  const text = asText(value);
+  const iso = text.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  return iso ? iso[0] : text.split('\n')[0].slice(0,55) || 'No progress recorded';
+}
+function tags(card) {
+  return `${card.running ? '<span class="tag running"><span class="live-dot" aria-hidden="true"></span>Running now</span>' : ''}${card.start_request && !card.running ? '<span class="tag focus-tag">Start requested</span>' : ''}${asText(card.account) ? `<span class="tag account" title="Account doing this task"><span class="ms" aria-hidden="true">smart_toy</span>${escapeHTML(asText(card.account))}</span>` : ''}<span class="tag">${escapeHTML(card.track)}</span>${card.focus ? '<span class="tag focus-tag">FOCUS</span>' : ''}${card.paused ? '<span class="tag paused">Paused</span>' : `<span class="tag">${escapeHTML(columnName(card.column))}</span>`}`;
+}
+function controlId(id) { return 'card-' + Array.from(id).map(char => char.codePointAt(0).toString(16)).join('-'); }
+function cardHTML(card) {
+  const key = controlId(card.id), list = ordered(cards,card.column).filter(visible), index = list.findIndex(item => item.id === card.id);
+  const disabled = !writeAllowed || busy ? ' disabled' : '';
+  return `<article class="card${card.focus ? ' focus' : ''}${card.running ? ' is-running' : ''}" data-id="${escapeHTML(card.id)}"><button id="${key}-open" class="card-main" data-open="${escapeHTML(card.id)}" aria-label="Open task: ${escapeHTML(card.title)}"><div class="tags">${tags(card)}</div><h3>${escapeHTML(card.title)}</h3><p class="why">${escapeHTML(asText(card.why).split('\n')[0])}</p>${card.running && card.progress ? `<p class="live">${escapeHTML(asText(card.progress))}${card.progress_at ? ' · ' + escapeHTML(asText(card.progress_at)) : ''}</p>` : ''}<div class="progress-date"><span>${escapeHTML(dateLabel(card.last_progress))}</span>${card.open_questions.length ? '<span>Needs your decision</span>' : ''}</div></button><div class="card-actions"><button id="${key}-grip" class="drag-handle" tabindex="-1" aria-label="Drag task to change priority"${disabled}><span class="ms" aria-hidden="true">drag_indicator</span></button><div class="move-field"><label for="${key}-move">Move to</label><select id="${key}-move" data-move="${escapeHTML(card.id)}" aria-label="Move ${escapeHTML(card.title)} to column"${disabled}>${COLUMNS.map(([id,name]) => `<option value="${id}"${card.column === id ? ' selected' : ''}>${name}</option>`).join('')}</select></div><button id="${key}-up" class="small-button" data-step="-1" data-card="${escapeHTML(card.id)}" aria-label="Raise priority: ${escapeHTML(card.title)}"${disabled || (index === 0 ? ' disabled' : '')}><span class="ms" aria-hidden="true">arrow_upward</span></button><button id="${key}-down" class="small-button" data-step="1" data-card="${escapeHTML(card.id)}" aria-label="Lower priority: ${escapeHTML(card.title)}"${disabled || (index === list.length-1 ? ' disabled' : '')}><span class="ms" aria-hidden="true">arrow_downward</span></button></div></article>`;
+}
+function render() {
+  if (dragging) return;
+  const focusId = document.activeElement?.id;
+  sorts.forEach(sort => sort.destroy()); sorts = [];
+  const focusName = asText(BOARD_CONFIG.focusTrack).trim();
+  const focus = focusName ? (cards.find(card => card.track.toLowerCase() === focusName.toLowerCase())?.track || focusName) : '';
+  const tracks = [...new Set(cards.map(card => card.track))].filter(track => !focus || track.toLowerCase() !== focus.toLowerCase()).sort();
+  const chips = [...(focus ? [[focus,focus,true]] : []),['','All tracks',false],...tracks.map(track => [track,track,false])];
+  $('track-filters').innerHTML = chips.map(([track,label,isFocus]) => `<button id="${isFocus ? 'track-focus' : track === '' ? 'track-all' : 'track-' + controlId(track)}" class="chip-button" data-track="${escapeHTML(track)}" aria-pressed="${activeTrack === track}">${escapeHTML(label)}${isFocus ? '<span class="focus-label">FOCUS</span>' : ''}</button>`).join('');
+  const shown = cards.filter(visible);
+  $('total-count').textContent = `${shown.length} / ${cards.length} tasks`;
+  $('empty-state').hidden = shown.length > 0;
+  $('empty-state').querySelector('h2').textContent = cards.length ? 'A little more room to focus' : 'A clear place for the next move';
+  $('empty-state').querySelector('p').textContent = cards.length ? 'No tasks match these filters. Choose All tracks or clear the checkboxes to see more work.' : 'This board fills from the shared database. The brain adds the task cards after publishing; your priorities and notes then stay with the board.';
+  $('empty-caption').textContent = cards.length ? 'Your filters are private to this viewer.' : db ? 'The collection is empty or still loading. The brain seeds it after publishing.' : 'Waiting for database cards. No sample tasks are stored in this page.';
+  $('mobile-tabs').innerHTML = COLUMNS.map(([id,name]) => `<button id="tab-${id}" role="tab" aria-controls="column-${id}" aria-selected="${activeTab === id}" tabindex="${activeTab === id ? '0' : '-1'}" data-tab="${id}">${name}<span class="count">${shown.filter(card => card.column === id).length}</span></button>`).join('');
+  $('board').innerHTML = COLUMNS.map(([id,name]) => { const items = ordered(shown,id); return `<section id="column-${id}" class="column${activeTab === id ? ' active' : ''}" aria-labelledby="heading-${id}"><header class="column-head"><h2 id="heading-${id}">${name}</h2><span class="count" aria-label="${items.length} tasks">${items.length}</span></header><div id="list-${id}" class="card-list" data-column="${id}">${items.map(cardHTML).join('')}${items.length ? '' : '<p class="column-empty">Room for the next task</p>'}</div></section>`; }).join('');
+  if (window.Sortable && writeAllowed && !busy) {
+    sorts = COLUMNS.map(([id]) => Sortable.create($('list-' + id), {
+      group:'cards',draggable:'.card',handle:'.drag-handle',animation:matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 140,
+      delayOnTouchOnly:true,delay:140,touchStartThreshold:4,fallbackOnBody:true,emptyInsertThreshold:30,
+      onStart:() => { dragging = true; },
+      onEnd:event => {
+        dragging = false;
+        const id = event.item.dataset.id, target = event.to.dataset.column;
+        const next = event.item.nextElementSibling?.dataset.id;
+        const remaining = ordered(cards,target).filter(card => card.id !== id);
+        const index = next ? remaining.findIndex(card => card.id === next) : remaining.length;
+        const changes = moveCards(cards,id,target,index < 0 ? remaining.length : index);
+        const before = cards.find(card => card.id === id);
+        const askWho = target === 'doing' && before && before.column !== 'doing' && !before.running;
+        persist(changes,`Moved to ${columnName(target)}.`,controlId(id) + '-open').then(saved => {
+          if (saved && askWho) { openDetail(id); $('assign-who').focus(); $('assign-status').textContent = 'Pick who works on it, then press Start.'; }
+        });
+      }
+    }));
+  }
+  if (detailId) {
+    const card = cards.find(item => item.id === detailId);
+    if (card) {
+      paintDetailFacts(card);
+      if (!drafts.has(detailId)) $('owner-note').value = card.owner_note;
+    } else $('detail-position').textContent = 'This task is no longer in the board.';
+  }
+  if (focusId && $(focusId)) $(focusId).focus({preventScroll:true});
+  refreshNoteControls();
+}
+async function writePatch(id, data) {
+  try { await db.collection('cards').doc(id).update(data); }
+  catch (error) {
+    if (error.code !== 'unavailable') throw error;
+    await new Promise(resolve => setTimeout(resolve,350 + Math.random()*300));
+    await db.collection('cards').doc(id).update(data);
+  }
+}
+async function persist(changes, success, focusId) {
+  if (busy || !writeAllowed || !db) { render(); return false; }
+  const patches = changes.map(({id,...fields}) => {
+    const card = cards.find(item => item.id === id);
+    if (!card) return null;
+    const changed = Object.fromEntries(Object.entries(fields).filter(([key,value]) => card[key] !== value));
+    return Object.keys(changed).length ? {id,data:changed} : null;
+  }).filter(Boolean);
+  if (!patches.length) { render(); return true; }
+  busy = true; render(); notice('Saving your changes…');
+  let succeeded = false;
+  try {
+    for (const patch of patches) {
+      const data = {...patch.data,updated_at:new Date().toISOString(),updated_by:viewerId};
+      await writePatch(patch.id,data);
+      cards = cards.map(card => card.id === patch.id ? {...card,...data} : card);
+    }
+    succeeded = true;
+    notice('Saved to the shared database.'); announce(success);
+  } catch (error) {
+    if (['invalid_argument','revoked','not_granted','capability_disabled','capability_removed'].includes(error.code)) writeAllowed = false;
+    notice(writeAllowed ? 'The change could not be fully saved. Check the current cards before trying again.' : 'Read-only: this view cannot save changes. Any saved changes remain visible.',true);
+    announce('Save failed. ' + connectionState);
+  } finally {
+    busy = false; render();
+    if (focusId && $(focusId)) $(focusId).focus({preventScroll:true});
+  }
+  return succeeded;
+}
+$('track-filters').addEventListener('click',event => { const button = event.target.closest('[data-track]'); if (!button) return; activeTrack = button.dataset.track; savePreferences(); render(); });
+['filter-waiting','filter-paused'].forEach(id => $(id).addEventListener('change',() => { savePreferences(); render(); }));
+function selectTab(tab) { activeTab = tab; savePreferences(); render(); $('tab-' + tab).focus({preventScroll:true}); }
+$('mobile-tabs').addEventListener('click',event => { const button = event.target.closest('[data-tab]'); if (button) selectTab(button.dataset.tab); });
+$('mobile-tabs').addEventListener('keydown',event => {
+  const index = COLUMNS.findIndex(item => item[0] === activeTab);
+  let next = index;
+  if (event.key === 'ArrowRight') next = (index+1)%5;
+  else if (event.key === 'ArrowLeft') next = (index+4)%5;
+  else if (event.key === 'Home') next = 0;
+  else if (event.key === 'End') next = 4;
+  else return;
+  event.preventDefault(); selectTab(COLUMNS[next][0]);
+});
+$('board').addEventListener('change',event => {
+  const input = event.target.closest('[data-move]'); if (!input) return;
+  const id = input.dataset.move, target = input.value;
+  // The phone and keyboard path uses the same pure move function as drag ordering.
+  const changes = moveToColumn(cards,id,target);
+  if (matchMedia('(max-width:700px)').matches) { activeTab = target; savePreferences(); }
+  persist(changes,`Moved to ${columnName(target)}.`,controlId(id) + '-move');
+});
+$('board').addEventListener('click',event => {
+  const open = event.target.closest('[data-open]'); if (open) { openDetail(open.dataset.open); return; }
+  const button = event.target.closest('[data-step]'); if (!button) return;
+  const card = cards.find(item => item.id === button.dataset.card); if (!card) return;
+  const list = ordered(cards,card.column).filter(visible), delta = Number(button.dataset.step);
+  const neighbor = list[list.findIndex(item => item.id === card.id)+delta]; if (!neighbor) return;
+  const full = ordered(cards,card.column).filter(item => item.id !== card.id);
+  const index = full.findIndex(item => item.id === neighbor.id) + (delta > 0 ? 1 : 0);
+  persist(moveCards(cards,card.id,card.column,index),'Priority updated.',button.id);
+});
+function detailSection(title,content) { return `<section class="detail-section"><h3>${title}</h3>${content}</section>`; }
+function paragraph(value, fallback='Not recorded.') { return `<p>${escapeHTML(asText(value) || fallback)}</p>`; }
+function paintDetailFacts(card) {
+  $('detail-title').textContent = card.title;
+  $('detail-position').textContent = columnName(card.column) + ' · ' + card.track;
+  $('detail-tags').innerHTML = tags(card);
+  $('detail-facts').innerHTML = detailSection('Why this matters',paragraph(card.why) + `<div class="source">${escapeHTML(asText(card.why_source) || 'Dated source may be included in the decision above; no separate source recorded.')}</div>`) +
+    (card.running ? detailSection('Running now',paragraph((asText(card.progress) || 'In progress.') + (card.progress_at ? ' (updated ' + asText(card.progress_at) + ')' : ''))) : '') +
+    detailSection('Status',paragraph(card.status_note || columnName(card.column))) +
+    (asText(card.account) ? detailSection('Account',paragraph(asText(card.account))) : '') +
+    detailSection('How',card.how.length ? `<ol>${card.how.map(step => '<li>' + escapeHTML(step) + '</li>').join('')}</ol>` : paragraph('No steps recorded.')) +
+    detailSection('Done means',paragraph(card.done_means)) +
+    detailSection('Depends on',card.depends_on.length ? '<ul>' + card.depends_on.map(id => { const dependency = cards.find(item => item.id === id); return '<li>' + (dependency ? `<button id="dependency-${controlId(id)}" class="dep-link" data-dependency="${escapeHTML(id)}">${escapeHTML(dependency.title)} · ${escapeHTML(id)}</button>` : escapeHTML(id) + ' — card not in this board') + '</li>'; }).join('') + '</ul>' : paragraph('No dependencies recorded.')) +
+    detailSection('Last progress',paragraph(card.last_progress)) +
+    detailSection('Open questions',card.open_questions.length ? '<ul>' + card.open_questions.map(question => '<li>' + escapeHTML(question) + '</li>').join('') + '</ul>' : paragraph('No open questions.'));
+}
+function openDetail(id) {
+  const card = cards.find(item => item.id === id); if (!card) return;
+  if (!$('detail-sheet').open) detailOrigin = document.activeElement?.id;
+  detailId = id;
+  paintDetailFacts(card);
+  $('owner-note').value = drafts.has(id) ? drafts.get(id) : card.owner_note;
+  refreshNoteControls();
+  if (!$('detail-sheet').open) $('detail-sheet').showModal();
+  else $('close-sheet').focus();
+  loadBrief(card);
+}
+function refreshNoteControls() {
+  const card = cards.find(item => item.id === detailId);
+  $('owner-note').disabled = !card || !writeAllowed || busy;
+  $('save-note').disabled = !card || !writeAllowed || busy || $('owner-note').value === card.owner_note;
+  const startable = !!card && writeAllowed && !busy && !card.running && card.column !== 'done';
+  $('assign-who').disabled = !startable; $('start-work').disabled = !startable;
+  if (card && asText(card.account) && [...$('assign-who').options].some(option => option.value === asText(card.account)) && document.activeElement !== $('assign-who')) $('assign-who').value = asText(card.account);
+  $('note-status').textContent = busy ? 'Saving…' : !writeAllowed ? 'Read-only in this view.' : card && $('owner-note').value !== card.owner_note ? 'Unsaved draft · kept here until you reload.' : 'Saved notes are shared with the brain.';
+}
+$('owner-note').addEventListener('input',() => { if (detailId) drafts.set(detailId,$('owner-note').value); refreshNoteControls(); });
+let starting = false;
+$('start-work').addEventListener('click',async () => {
+  const card = cards.find(item => item.id === detailId); if (!card || card.running || starting) return;
+  starting = true; $('start-work').disabled = true;
+  try {
+  const who = $('assign-who').value, at = new Date().toISOString();
+  let sent = false, reason = '';
+  if (comments && typeof comments.sendToClaude === 'function') {
+    try {
+      const state = await comments.canSendToClaude();
+      const anchorEl = document.querySelector(`article.card[data-id="${CSS.escape(card.id)}"]`) || $('assign-section');
+      if (state === 'available') { await comments.sendToClaude({anchor:await comments.anchorFor(anchorEl),text:`START ${card.id} on ${who}: ${card.title}`}); sent = true; }
+      else reason = state === 'no_session' ? 'the brain is not connected right now' : 'sending to the brain is not available in this view';
+    } catch (error) { reason = error && error.code === 'rate_limited' ? 'too many sends, wait a moment' : 'the message to the brain did not go through'; }
+  } else reason = 'messages to the brain are not available in this view';
+  const moves = card.column === 'doing' ? [] : moveCards(cards,card.id,'doing',0);
+  const mine = moves.find(change => change.id === card.id) || {id:card.id};
+  const rest = moves.filter(change => change.id !== card.id);
+  const saved = await persist([...rest,{...mine,account:who,start_request:{account:who,at,sent},status_note:`start requested: ${who} (${at.slice(0,16).replace('T',' ')} UTC)`}],`Start requested for ${who}.`,'start-work');
+  $('assign-status').textContent = !saved ? 'Not saved. Check the board and try again.'
+    : sent ? `Sent to the brain. It checks ${who}'s limit and the code-tree lock, then starts the worker; the card shows Running now when it starts.`
+    : `Saved, but ${reason}. The brain picks it up at its next board check, or tell it in chat.`;
+  } finally { starting = false; refreshNoteControls(); }
+});
+$('save-note').addEventListener('click',async () => {
+  const id = detailId, note = $('owner-note').value;
+  if (await persist([{id,owner_note:note}],'Owner note saved.')) { if (drafts.get(id) === note) drafts.delete(id); refreshNoteControls(); }
+});
+$('detail-facts').addEventListener('click',event => { const button = event.target.closest('[data-dependency]'); if (button) openDetail(button.dataset.dependency); });
+$('close-sheet').addEventListener('click',() => $('detail-sheet').close());
+$('detail-sheet').addEventListener('close',() => { briefRequest++; detailId = null; if (detailOrigin && $(detailOrigin)) $(detailOrigin).focus({preventScroll:true}); });
+function markdownHTML(markdown) {
+  const renderer = new marked.Renderer();
+  renderer.html = html => escapeHTML(html);
+  renderer.checkbox = checked => checked ? '[x] ' : '[ ] ';
+  renderer.link = (href,title,text) => {
+    const url = safeURL(href);
+    return url ? `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${text}</a>` : text;
+  };
+  renderer.image = (href,title,alt) => escapeHTML(alt || 'Image');
+  const template = document.createElement('template');
+  template.innerHTML = marked.parse(markdown,{renderer,gfm:true,breaks:false});
+  const allowed = new Set(['P','BR','HR','H1','H2','H3','H4','H5','H6','UL','OL','LI','STRONG','EM','DEL','BLOCKQUOTE','PRE','CODE','A','TABLE','THEAD','TBODY','TR','TH','TD']);
+  // Defense in depth: allow only Markdown structure and safe link attributes.
+  for (const element of [...template.content.querySelectorAll('*')]) {
+    if (!allowed.has(element.tagName)) { element.replaceWith(document.createTextNode(element.textContent)); continue; }
+    const href = element.tagName === 'A' ? safeURL(element.getAttribute('href')) : null;
+    const start = element.tagName === 'OL' ? element.getAttribute('start') : null;
+    for (const attr of [...element.attributes]) element.removeAttribute(attr.name);
+    if (element.tagName === 'A' && href) { element.setAttribute('href',href); element.setAttribute('target','_blank'); element.setAttribute('rel','noopener noreferrer'); }
+    if (element.tagName === 'OL' && /^\d+$/.test(start || '')) element.setAttribute('start',start);
+  }
+  return template.innerHTML;
+}
+async function loadBrief(card) {
+  const request = ++briefRequest;
+  briefText = ''; $('copy-brief').disabled = true;
+  $('brief-content').replaceChildren(); $('copy-fallback').hidden = true; $('copy-fallback-label').hidden = true;
+  $('brief-status').hidden = false;
+  $('brief-status').textContent = 'Loading handoff brief…';
+  const path = asText(card.brief);
+  // Limit reads to published briefs; never fetch arbitrary card-provided URLs.
+  if (!/^briefs\/[A-Za-z0-9_~:@+.\-]+\.md$/.test(path) || path.includes('/../')) { $('brief-status').textContent = 'Brief not written yet. The brain will publish the handoff here.'; return; }
+  try {
+    briefBundle = briefBundle || fetch('./briefs.json',{credentials:'same-origin',cache:'no-cache'}).then(response => { if (!response.ok) throw new Error(response.status === 404 ? 'missing' : 'unavailable'); return response.json(); }).catch(error => { briefBundle = null; throw error; });
+    const bundle = await briefBundle;
+    if (request !== briefRequest) return;
+    const markdown = bundle && typeof bundle[path] === 'string' ? bundle[path] : '';
+    if (request !== briefRequest) return;
+    if (!markdown.trim() || /^\s*(?:<!doctype\s+html|<html|<title)/i.test(markdown)) throw new Error('missing');
+    briefText = markdown; $('copy-brief').disabled = false;
+    $('brief-status').hidden = true;
+    if (window.marked) $('brief-content').innerHTML = markdownHTML(markdown);
+    else { const pre = document.createElement('pre'); pre.textContent = markdown; $('brief-content').append(pre); $('brief-status').hidden = false; $('brief-status').textContent = 'Markdown renderer unavailable. Showing the full brief as text.'; }
+  } catch (error) {
+    if (request !== briefRequest) return;
+    $('brief-status').textContent = error.message === 'missing' ? 'Brief not written yet. The brain will publish the handoff here.' : 'The brief could not be loaded. Reopen this task to try again.';
+  }
+}
+$('copy-brief').addEventListener('click',async () => {
+  if (!briefText) return;
+  const text = briefText, id = detailId;
+  try {
+    await navigator.clipboard.writeText(text);
+    if (id !== detailId) return;
+    $('brief-status').hidden = false; $('brief-status').textContent = 'Brief copied. Paste it into a fresh session.';
+  } catch {
+    if (id !== detailId) return;
+    $('copy-fallback').hidden = false; $('copy-fallback-label').hidden = false;
+    $('copy-fallback').value = text; $('copy-fallback').focus(); $('copy-fallback').select(); $('copy-fallback').setSelectionRange(0,text.length);
+    $('brief-status').hidden = false; $('brief-status').textContent = 'Copy is unavailable here. The brief text is selected; use your device’s Copy command.';
+  }
+});
+async function start() {
+  render();
+  if (!window.claude || typeof claude.use !== 'function') { notice('Read-only preview: the shared database is unavailable. Open the published artifact to see its cards.'); return; }
+  try {
+    db = await claude.use('db');
+    if (!db) { notice('Read-only: the shared database is unavailable in this view. The board will fill when database access is available.'); return; }
+    const user = await claude.use('user');
+    const [permission,id] = user ? await Promise.all([user.can('data.write'),user.id()]) : [null,null];
+    viewerId = id; writeAllowed = permission !== false;
+    claude.use('comments').then(namespace => { comments = namespace; refreshNoteControls(); }).catch(() => { comments = null; });
+    notice(writeAllowed ? 'Connected. Waiting for database cards…' : 'Read-only: you can view tasks, but cannot move cards or save notes.');
+    unsubscribe = db.collection('cards').onSnapshot(snapshot => {
+      cards = snapshot.docs.map(normalize);
+      if (!busy) notice(!writeAllowed ? 'Read-only: you can view tasks, but cannot move cards or save notes.' : snapshot.metadata.hasPendingWrites ? 'Saving to the shared database…' : snapshot.metadata.fromCache ? 'Showing cached cards. Waiting for the shared database…' : cards.length ? 'Live board · changes are shared with the brain.' : 'Connected · waiting for the brain to seed the cards.');
+      if (!busy && !dragging) render();
+    },error => {
+      writeAllowed = false;
+      notice('Read-only: the live database connection ended. Reload the artifact to reconnect. (' + asText(error.code) + ')',true);
+      render();
+    });
+    render();
+    if (!window.Sortable) notice('Dragging is unavailable. Use each card’s Move to select and priority arrows.',true);
+  } catch {
+    writeAllowed = false; notice('Read-only: the shared database could not be opened. Reload the artifact to reconnect.',true); render();
+  }
+}
+let mediaItems = [], mediaKind = 'all', mediaTopic = '', mediaLoaded = false, mediaLoading = false;
+let goalsLoaded = false, goalsLoading = false, viewerIdMedia = null, viewerOrigin = null;
+function selectHub(tab, focus = false, updateHash = true) {
+  activeHub = hubTab('#' + tab);
+  for (const id of HUB_TABS) {
+    $('panel-' + id).hidden = id !== activeHub;
+    $('hub-tab-' + id).setAttribute('aria-selected',String(id === activeHub));
+    $('hub-tab-' + id).tabIndex = id === activeHub ? 0 : -1;
+  }
+  if (updateHash && location.hash !== '#' + activeHub) location.hash = activeHub;
+  savePreferences();
+  if (activeHub === 'media') loadMedia();
+  if (activeHub === 'goals') loadGoals();
+  if (activeHub === '3d') load3d();
+  if (focus) $('hub-tab-' + activeHub).focus({preventScroll:true});
+}
+$('hub-tabs').addEventListener('click',event => { const button = event.target.closest('[data-hub]'); if (button) selectHub(button.dataset.hub,true); });
+$('hub-tabs').addEventListener('keydown',event => {
+  const index = HUB_TABS.indexOf(activeHub);
+  const length = HUB_TABS.length;
+  const next = event.key === 'ArrowRight' ? (index+1)%length : event.key === 'ArrowLeft' ? (index+length-1)%length : event.key === 'Home' ? 0 : event.key === 'End' ? length-1 : -1;
+  if (next < 0) return;
+  event.preventDefault(); selectHub(HUB_TABS[next],true);
+});
+window.addEventListener('hashchange',() => selectHub(hubTab(location.hash),false,false));
+async function loadMedia() {
+  if (mediaLoaded || mediaLoading) return;
+  mediaLoading = true;
+  $('media-state').hidden = false; $('media-state').textContent = 'Loading the media library…';
+  try {
+    const response = await fetch('media.json',{credentials:'same-origin',cache:'no-cache'});
+    if (!response.ok) throw new Error(response.status === 404 ? 'missing' : 'unavailable');
+    mediaItems = parseMedia(await response.json()); mediaLoaded = true; renderMedia();
+  } catch (error) {
+    $('media-state').hidden = false;
+    $('media-state').textContent = error.message === 'missing' ? 'The library is being built. Images and recordings will appear here when published.' : 'The media library could not be loaded. Switch back to this tab to retry.';
+  } finally { mediaLoading = false; }
+}
+function filteredMedia() { return filterMedia(mediaItems,mediaKind,mediaTopic,$('media-search').value); }
+function mediaMonth(date) { return /^\d{4}-\d{2}/.test(date) ? date.slice(0,7) : 'Undated'; }
+function monthLabel(month) {
+  if (month === 'Undated') return month;
+  const date = new Date(month + '-01T12:00:00Z');
+  return Number.isNaN(date.getTime()) ? 'Undated' : date.toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
+}
+function renderMedia() {
+  const focusId = document.activeElement?.id;
+  for (const kind of ['all','image','video']) $('media-kind-' + kind).setAttribute('aria-pressed',String(mediaKind === kind));
+  const topics = [...new Set(mediaItems.map(item => item.topic))].sort();
+  $('media-topics').innerHTML = [['','All topics'],...topics.map(topic => [topic,topic])].map(([topic,title],index) => `<button id="media-topic-${index}" class="chip-button" data-topic="${escapeHTML(topic)}" aria-pressed="${mediaTopic === topic}">${escapeHTML(title)}</button>`).join('');
+  const items = filteredMedia(), months = [...new Set(items.map(item => mediaMonth(item.date)))];
+  $('media-count').textContent = `${items.length} / ${mediaItems.length} files`;
+  $('media-state').hidden = items.length > 0;
+  $('media-state').textContent = mediaItems.length ? 'No media matches these filters. Try All, All topics, or a different search.' : 'The library is being built. Images and recordings will appear here when published.';
+  $('media-content').innerHTML = months.map(month => `<section><h3 class="hub-heading">${escapeHTML(monthLabel(month))}</h3><div class="media-grid">${items.filter(item => mediaMonth(item.date) === month).map(item => {
+    const thumbnail = mediaURL(item.kind === 'image' ? item.file : item.poster);
+    return `<button id="media-open-${controlId(item.id)}" class="media-card" data-media="${escapeHTML(item.id)}"><span class="media-thumb">${thumbnail ? `<img src="${escapeHTML(thumbnail)}" alt="" loading="lazy" decoding="async">` : '<span class="ms" aria-hidden="true">movie</span>'}${item.kind === 'video' ? `<span class="media-play"><span class="ms" aria-hidden="true">play_arrow</span>${durationLabel(item.duration_s)}</span>` : ''}</span><span class="media-label"><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.date.slice(0,10) || 'Date unclear')} · ${escapeHTML(item.topic)}</small></span></button>`;
+  }).join('')}</div></section>`).join('');
+  if (focusId && $(focusId)) $(focusId).focus({preventScroll:true});
+}
+$('media-kinds').addEventListener('click',event => { const button = event.target.closest('[data-kind]'); if (!button) return; mediaKind = button.dataset.kind; renderMedia(); });
+$('media-topics').addEventListener('click',event => { const button = event.target.closest('[data-topic]'); if (!button) return; mediaTopic = button.dataset.topic; renderMedia(); });
+$('media-search').addEventListener('input',renderMedia);
+$('media-content').addEventListener('click',event => { const button = event.target.closest('[data-media]'); if (button) openMedia(button.dataset.media); });
+function clearMediaStage() {
+  const video = $('viewer-stage').querySelector('video');
+  if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+  $('viewer-stage').replaceChildren();
+}
+function openMedia(id) {
+  const items = filteredMedia(), index = items.findIndex(item => item.id === id);
+  if (index < 0) return;
+  const focusId = document.activeElement?.id;
+  if (!$('media-viewer').open) viewerOrigin = document.activeElement?.id;
+  viewerIdMedia = id;
+  clearMediaStage();
+  const item = items[index], asset = document.createElement(item.kind === 'video' ? 'video' : 'img');
+  asset.src = mediaURL(item.file);
+  if (item.kind === 'video') { asset.controls = true; asset.playsInline = true; asset.preload = 'metadata'; if (mediaURL(item.poster)) asset.poster = mediaURL(item.poster); }
+  else asset.alt = item.title;
+  $('viewer-error').hidden = true;
+  asset.addEventListener('error',() => { if (viewerIdMedia === id) { $('viewer-error').textContent = 'This file is unavailable. Its original path is shown below.'; $('viewer-error').hidden = false; } });
+  $('viewer-stage').append(asset);
+  $('viewer-title').textContent = item.title;
+  $('viewer-date').textContent = item.date || 'Date unclear';
+  $('viewer-caption').textContent = item.caption;
+  $('viewer-path').textContent = item.orig_path || 'Original path unclear';
+  $('viewer-position').textContent = `${index+1} / ${items.length}`;
+  $('viewer-prev').disabled = index === 0; $('viewer-next').disabled = index === items.length-1;
+  if (!$('media-viewer').open) $('media-viewer').showModal();
+  else if (['viewer-prev','viewer-next'].includes(focusId) && $(focusId).disabled) $('viewer-close').focus({preventScroll:true});
+}
+function stepViewer(delta) { const id = mediaStep(filteredMedia(),viewerIdMedia,delta); if (id) openMedia(id); }
+$('viewer-prev').addEventListener('click',() => stepViewer(-1));
+$('viewer-next').addEventListener('click',() => stepViewer(1));
+$('viewer-close').addEventListener('click',() => $('media-viewer').close());
+$('media-viewer').addEventListener('keydown',event => {
+  if (event.key === 'Escape') { event.preventDefault(); $('media-viewer').close(); }
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); stepViewer(event.key === 'ArrowLeft' ? -1 : 1); }
+});
+$('media-viewer').addEventListener('close',() => { viewerIdMedia = null; clearMediaStage(); if (viewerOrigin && $(viewerOrigin)) $(viewerOrigin).focus({preventScroll:true}); });
+function goalLinks(ids, key) {
+  return `<div class="goal-links">${asList(ids).map((id,index) => `<button id="goal-link-${key}-${index}" data-goal-card="${escapeHTML(id)}" aria-label="Open task ${escapeHTML(id)}">${escapeHTML(id)}</button>`).join('')}</div>`;
+}
+function goalStatus(status) { const value = GOAL_STATUSES.includes(status) ? status : 'later'; return `<span class="tag goal-status ${value}">${value}</span>`; }
+function renderGoals(data) {
+  const goals = parseGoals(data);
+  $('goals-now').hidden = !asText(data.now); $('goals-now-text').textContent = asText(data.now);
+  $('goals-generated').textContent = data.generated ? 'Snapshot: ' + asText(data.generated) : 'Snapshot date unclear';
+  $('goals-state').hidden = goals.length > 0; $('goals-state').textContent = 'The goals are being gathered. Plans and current progress will appear here when published.';
+  $('goals-content').innerHTML = GOAL_GROUPS.map(group => {
+    const items = goals.filter(goal => goal.group === group); if (!items.length) return '';
+    return `<section><h2 class="hub-heading">${escapeHTML(group.charAt(0).toUpperCase() + group.slice(1))}</h2><div class="goal-grid">${items.map(goal => {
+      const key = controlId(goal.id);
+      const decisions = Array.isArray(goal.decisions) ? goal.decisions.filter(item => item && typeof item === 'object') : [];
+      const subgoals = Array.isArray(goal.subgoals) ? goal.subgoals.filter(item => item && typeof item === 'object') : [];
+      return `<article id="goal-${key}" class="goal-card">${goalStatus(goal.status)}<h3>${escapeHTML(goal.title || goal.id)}</h3><p class="goal-why">${escapeHTML(asText(goal.why))}</p>${goal.progress != null ? `<p class="muted">Progress: ${escapeHTML(asText(goal.progress))}</p>` : ''}<p>${escapeHTML(asText(goal.where_we_are) || 'Current state unclear.')}</p>${goalLinks(goal.cards,key)}<details><summary>Decisions and subgoals</summary><h4>Decisions</h4>${decisions.length ? '<ul>' + decisions.map(item => `<li><strong>${escapeHTML(asText(item.date))}</strong><p>${escapeHTML(asText(item.text))}</p><div class="source">${escapeHTML(asText(item.source))}</div></li>`).join('') + '</ul>' : '<p>No decisions recorded.</p>'}<h4>Subgoals</h4>${subgoals.length ? '<ul>' + subgoals.map((item,index) => `<li>${goalStatus(item.status)} ${escapeHTML(asText(item.title))}${goalLinks(item.cards,key + '-sub-' + index)}</li>`).join('') + '</ul>' : '<p>No subgoals recorded.</p>'}<h4>Sources</h4>${asList(goal.sources).map(source => `<div class="source">${escapeHTML(source)}</div>`).join('')}</details></article>`;
+    }).join('')}</div></section>`;
+  }).join('');
+}
+async function loadGoals() {
+  if (goalsLoaded || goalsLoading) return;
+  goalsLoading = true; $('goals-state').hidden = false; $('goals-state').textContent = 'Loading goals…';
+  try {
+    const response = await fetch('goals.json',{credentials:'same-origin',cache:'no-cache'});
+    if (!response.ok) throw new Error(response.status === 404 ? 'missing' : 'unavailable');
+    renderGoals(await response.json()); goalsLoaded = true;
+  } catch (error) {
+    $('goals-state').hidden = false;
+    $('goals-state').textContent = error.message === 'missing' ? 'The goals are being gathered. Plans and current progress will appear here when published.' : 'Goals could not be loaded. Switch back to this tab to retry.';
+  } finally { goalsLoading = false; }
+}
+$('goals-content').addEventListener('click',event => {
+  const button = event.target.closest('[data-goal-card]'); if (!button) return;
+  const id = button.dataset.goalCard;
+  selectHub('tasks');
+  const card = cards.find(item => item.id === id);
+  $('goal-link-status').hidden = !!card;
+  if (card) { activeTab = card.column; savePreferences(); render(); ($(controlId(id) + '-open') || $('hub-tab-tasks')).focus({preventScroll:true}); openDetail(id); }
+  else { $('goal-link-status').textContent = `Task ${id} is not in the shared database yet. Retry from Goals after the cards load.`; announce($('goal-link-status').textContent); }
+});
+let modelItems = [], modelIndexLoaded = false, modelIndexLoading = false, selectedModelId = '', modelRequest = 0;
+let modelViewer = null, modelViewerPending = null, modelPageClosed = false;
+const getModelBundle = createModelBundles((...args) => fetch(...args));
+function modelStatus(text,error = false) {
+  $('model-state').textContent = text; $('model-state').hidden = !text;
+  $('model-state').dataset.error = String(error);
+  $('model-stage').setAttribute('aria-busy',String(!!text && !error));
+  $('model-retry').hidden = !error;
+}
+async function load3d() {
+  if (modelIndexLoaded || modelIndexLoading) return;
+  modelIndexLoading = true; modelStatus('Loading the 3D library…');
+  try {
+    const response = await fetch('models3d/index.json',{credentials:'same-origin',cache:'no-cache'});
+    if (!response.ok) throw new Error(response.status === 404 ? 'The 3D library is being built.' : 'Index file ' + response.status);
+    modelItems = parseModelIndex(await response.json()); modelIndexLoaded = true;
+    renderModelPicker(); modelStatus(modelItems.length ? 'Choose a model to open its 3D view.' : 'The 3D library is being built.');
+    $('model-stage').setAttribute('aria-busy','false');
+  } catch (error) { modelStatus('The 3D library could not load. ' + error.message,true); }
+  finally { modelIndexLoading = false; }
+}
+function renderModelPicker() {
+  const filtered = filterModels(modelItems,$('model-search').value);
+  $('model-count').textContent = filtered.length + ' / ' + modelItems.length + ' models';
+  $('model-picker').innerHTML = '<option value="" disabled>' + (filtered.length ? 'Choose a model…' : 'No models match this search.') + '</option>' + MODEL_GROUPS.map(group => {
+    const items = filtered.filter(item => item.group === group);
+    return items.length ? `<optgroup label="${group}">${items.map(item => `<option value="${escapeHTML(item.id)}">${escapeHTML(item.name)}</option>`).join('')}</optgroup>` : '';
+  }).join('');
+  $('model-picker').value = filtered.some(item => item.id === selectedModelId) ? selectedModelId : '';
+}
+async function ensureModelViewer() {
+  if (!modelViewerPending) {
+    modelViewerPending = (async () => {
+      // The working phone viewer uses image elements for embedded textures.
+      try { Object.defineProperty(window,'createImageBitmap',{value:undefined,configurable:true,writable:true}); } catch {}
+      const [THREE,{GLTFLoader},{OrbitControls}] = await Promise.all([
+        import('three'),import('three/addons/loaders/GLTFLoader.js'),import('three/addons/controls/OrbitControls.js')
+      ]);
+      if (modelPageClosed) throw new Error('The page is closing');
+      return buildModelViewer(THREE,GLTFLoader,OrbitControls);
+    })();
+    modelViewerPending.catch(() => { modelViewerPending = null; });
+  }
+  modelViewer = await modelViewerPending; return modelViewer;
+}
+function buildModelViewer(THREE,GLTFLoader,OrbitControls) {
+  const canvas = $('model-canvas'), stage = $('model-stage');
+  const renderer = new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40,1,0.02,1000);
+  const controls = new OrbitControls(camera,canvas);
+  controls.enableDamping = true; controls.autoRotate = false; controls.maxPolarAngle = Math.PI * 0.495;
+  const cssColor = token => getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  scene.add(new THREE.HemisphereLight(cssColor('--model-light'),cssColor('--model-bounce'),2));
+  const key = new THREE.DirectionalLight(cssColor('--model-light'),2.5); key.position.set(-8,18,10); key.castShadow = true;
+  key.shadow.mapSize.set(1024,1024); key.shadow.normalBias = 0.04; scene.add(key);
+  const fill = new THREE.DirectionalLight(cssColor('--model-light'),1); fill.position.set(8,6,-8); scene.add(fill);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:cssColor('--wash'),roughness:1}));
+  ground.rotation.x = -Math.PI/2; ground.position.y = -0.015; ground.receiveShadow = true; scene.add(ground);
+  const grid = new THREE.GridHelper(100,100,cssColor('--mute'),cssColor('--line')); grid.position.y = -0.008; scene.add(grid);
+  const figure = new THREE.Group(), figureMaterial = new THREE.MeshStandardMaterial({color:cssColor('--mute'),roughness:1});
+  function bodyPart(geometry,x,y,z) { const mesh = new THREE.Mesh(geometry,figureMaterial); mesh.position.set(x,y,z); mesh.castShadow = true; figure.add(mesh); return mesh; }
+  bodyPart(new THREE.SphereGeometry(0.12,16,12),0,1.68,0);
+  bodyPart(new THREE.CylinderGeometry(0.18,0.14,0.55,12),0,1.255,0);
+  for (const sign of [-1,1]) {
+    bodyPart(new THREE.CylinderGeometry(0.065,0.05,0.88,10),sign*0.09,0.44,0);
+    const arm = bodyPart(new THREE.CylinderGeometry(0.045,0.035,0.58,10),sign*0.23,1.18,0); arm.rotation.z = sign*0.12;
+  }
+  scene.add(figure);
+  const session = createModelSession(new GLTFLoader(),scene,root => new THREE.AnimationMixer(root));
+  const clock = new THREE.Clock(); let action = null, playing = false, bounds = null, disposed = false, lastPalette = '';
+  function palette() {
+    const bg = cssColor('--wash'), color = cssColor('--mute'), line = cssColor('--line'), signature = bg+color+line;
+    if (signature === lastPalette) return; lastPalette = signature;
+    scene.background = new THREE.Color(bg); ground.material.color.set(bg); figureMaterial.color.set(color);
+    // GridHelper uses vertex colors: update them when the page theme changes.
+    const colors = grid.geometry.attributes.color, main = new THREE.Color(color), other = new THREE.Color(line);
+    for (let i=0;i<colors.count;i++) { const c = (Math.floor(i/4) === 50) ? main : other; colors.setXYZ(i,c.r,c.g,c.b); }
+    colors.needsUpdate = true;
+  }
+  function resize() { const width = stage.clientWidth, height = stage.clientHeight; if (!width || !height) return; renderer.setSize(width,height,false); camera.aspect=width/height; camera.updateProjectionMatrix(); }
+  const observer = new ResizeObserver(resize); observer.observe(stage); resize();
+  function frame() {
+    if (!bounds) return;
+    const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
+    const radius = Math.max(size.length()/2,1.2), distance = radius / Math.sin(THREE.MathUtils.degToRad(camera.fov/2)) / Math.min(1,camera.aspect) * 1.15;
+    controls.target.copy(center); camera.position.copy(center).add(new THREE.Vector3(0.85,0.55,1).normalize().multiplyScalar(distance));
+    camera.near = Math.max(0.01,distance/1000); camera.far = Math.max(1000,distance*10); camera.updateProjectionMatrix();
+    controls.maxDistance = distance*5; controls.update();
+  }
+  function playButton() { $('model-play').setAttribute('aria-pressed',String(playing)); $('model-play').innerHTML = `<span class="ms" aria-hidden="true">${playing ? 'pause' : 'play_arrow'}</span> ${playing ? 'Pause' : 'Play'}`; }
+  function clip(index) {
+    if (!session.mixer) return;
+    session.mixer.stopAllAction();
+    action = session.mixer.clipAction(session.current.animations[index]); action.reset().play(); action.paused = !playing;
+    session.mixer.update(0);
+  }
+  renderer.setAnimationLoop(() => {
+    const delta = Math.min(clock.getDelta(),0.1);
+    if (disposed || activeHub !== '3d' || document.hidden) return;
+    palette(); if (playing && session.mixer) session.mixer.update(delta);
+    controls.update(); renderer.render(scene,camera);
+  });
+  canvas.addEventListener('webglcontextlost',event => { event.preventDefault(); modelStatus('The 3D view lost its graphics context. Reload the page to reopen it.',true); });
+  return {
+    async show(getBytes) {
+      playing = false; action = null; bounds = null; playButton();
+      const loaded = await session.show(getBytes); if (!loaded) return null;
+      const root = loaded.scene;
+      root.traverse(object => { if (object.isMesh) { object.castShadow = true; object.receiveShadow = true; } });
+      const box = new THREE.Box3().setFromObject(root), center = box.getCenter(new THREE.Vector3());
+      root.position.x -= center.x; root.position.z -= center.z; root.position.y -= box.min.y; root.updateMatrixWorld(true);
+      const modelBounds = new THREE.Box3().setFromObject(root), size = modelBounds.getSize(new THREE.Vector3());
+      figure.position.set(size.x/2 + 0.65,0,0);
+      bounds = modelBounds.clone().union(new THREE.Box3().setFromObject(figure));
+      const extent = Math.max(size.x,size.z,4), shadow = key.shadow.camera;
+      key.position.set(-extent,Math.max(size.y,extent)*1.5,extent);
+      Object.assign(shadow,{left:-extent,right:extent,top:extent,bottom:-extent,near:0.1,far:extent*8+size.y*4}); shadow.updateProjectionMatrix();
+      key.target.position.set(0,size.y*0.4,0); scene.add(key.target);
+      resize(); frame(); return loaded;
+    },
+    clip,frame,
+    toggle() { if (!action) return; playing = !playing; action.paused = !playing; playButton(); },
+    dispose() { disposed = true; session.clear(); observer.disconnect(); renderer.setAnimationLoop(null); controls.dispose(); disposeModel(scene); renderer.dispose(); }
+  };
+}
+async function openModel(id) {
+  const item = modelItems.find(model => model.id === id); if (!item) return;
+  const request = ++modelRequest; selectedModelId = id;
+  $('model-title').textContent = item.name;
+  $('model-facts').textContent = item.group + ' · ' + item.tris.toLocaleString() + ' triangles' + (item.size_m ? ' · '+item.size_m.map(value => Number(value.toFixed(2))).join(' × ')+' m' : '');
+  $('model-frame').disabled = true; $('model-clip').disabled = true; $('model-play').disabled = true;
+  $('model-clip').innerHTML = '<option value="">Loading…</option>';
+  modelStatus('Loading ' + item.name + '…');
+  try {
+    const viewer = await ensureModelViewer(); if (request !== modelRequest) return;
+    const loaded = await viewer.show(async () => {
+      const bundle = await getModelBundle(item.bundle), entry = bundle[id];
+      if (!entry || entry.group !== item.group) throw new Error('Model missing from its bundle');
+      return toGlb(modelDocument(entry.bin));
+    });
+    if (request !== modelRequest || !loaded) return;
+    $('model-frame').disabled = false;
+    $('model-clip').innerHTML = loaded.animations.length ? loaded.animations.map((clip,index) => `<option value="${index}">${escapeHTML(clip.name || 'Clip '+(index+1))}</option>`).join('') : '<option value="">No animation</option>';
+    $('model-clip').disabled = !loaded.animations.length; $('model-play').disabled = !loaded.animations.length;
+    if (loaded.animations.length) { $('model-clip').value = '0'; viewer.clip(0); }
+    modelStatus('');
+  } catch (error) { if (request === modelRequest) { modelStatus('This model could not load. ' + error.message + '. Use Retry loading to try again.',true); $('model-clip').innerHTML = '<option value="">Unavailable</option>'; } }
+}
+$('model-search').addEventListener('input',renderModelPicker);
+$('model-picker').addEventListener('change',() => openModel($('model-picker').value));
+$('model-clip').addEventListener('change',() => modelViewer?.clip(Number($('model-clip').value)));
+$('model-play').addEventListener('click',() => modelViewer?.toggle());
+$('model-frame').addEventListener('click',() => modelViewer?.frame());
+$('model-retry').addEventListener('click',() => selectedModelId ? openModel(selectedModelId) : load3d());
+
+window.addEventListener('pagehide',() => { modelPageClosed = true; modelRequest++; modelViewer?.dispose(); if (unsubscribe) unsubscribe(); sorts.forEach(sort => sort.destroy()); clearMediaStage(); },{once:true});
+function applyConfig() {
+  if (asText(BOARD_CONFIG.title)) { $('board-title').textContent = asText(BOARD_CONFIG.title); document.title = asText(BOARD_CONFIG.title); }
+  if (asText(BOARD_CONFIG.eyebrow)) $('board-eyebrow').textContent = asText(BOARD_CONFIG.eyebrow);
+  if (asText(BOARD_CONFIG.intro)) $('board-intro').textContent = asText(BOARD_CONFIG.intro);
+  for (const tab of ['media','goals','3d']) $('hub-tab-' + tab).hidden = !HUB_TABS.includes(tab);
+  $('hub-tabs').hidden = HUB_TABS.length < 2;
+  const people = Array.isArray(BOARD_CONFIG.assignees) ? BOARD_CONFIG.assignees.filter(item => item && asText(item.value)) : [];
+  if (people.length) $('assign-who').innerHTML = people.map(item => `<option value="${escapeHTML(asText(item.value))}">${escapeHTML(asText(item.label) || asText(item.value))}</option>`).join('');
+}
+applyConfig();
+selectHub(activeHub);
+start();
+</script>

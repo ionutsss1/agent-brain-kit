@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""brainwatch - watches the brain lease and says which account should take over, and when.
+
+It uses no Claude usage and never starts a Claude session itself: the owner starts the takeover brain with
+the one command it prints (an unattended launcher is a safety risk). Run one pass every 2 minutes from
+launchd (macOS) or cron/systemd (Linux): see docs/ARCHITECTURE.md. Each pass:
+  1. PAUSED.md exists (every account was at its cap) -> nothing until the owner runs `brainwatch --resume`.
+  2. No lease, or released -> nothing (nobody asked for a brain).
+  3. Takeover is due when the holder is
+       stale:    no heartbeat for brain.stale_minutes and its claude process is gone, or
+       at limit: its account is at a cap (5-hour >= brain.five_hour_limit with the reset more than 20 min
+                 away, or the week at the account's cap) and the session has been quiet for
+                 brain.quiet_at_limit_minutes (a session at its limit cannot use tools).
+     An idle holder (quiet, process alive, not at a cap) is left alone: it is waiting for the owner.
+  4. At most one alert per brain.alert_gap_minutes. Candidates: every other account (never the one that just
+     failed, never one with a brain-<acct> screen already running), not at a cap and not in its 5-hour
+     cool-down, with headroom left. Best = 5-hour under 80% first, then the most headroom.
+  5. Alert: <brain>/TAKEOVER_DUE.md with the reason, the pick and the exact command, a desktop notification,
+     and an activity line. The new brain takes the lease itself (TAKEOVER.md step 1).
+  6. No candidate -> PAUSED.md (pause rule), brain.pause_command if set, a notification and an activity line.
+
+  brainwatch              one pass
+  brainwatch --dry-run    one pass that says what it would do and changes nothing
+  brainwatch --explain    the same as --dry-run plus every account's numbers
+  brainwatch --resume     owner only: clear PAUSED.md so alerts may happen again
+Test overrides: see brainlib.py; KIT_SCREENS="brain-x,..." fakes the running screens.
+"""
+import os
+import platform
+import re
+import shlex
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import brainlib as B  # noqa: E402
+
+if "-h" in sys.argv or "--help" in sys.argv:
+    print(__doc__)
+    sys.exit(0)
+
+ALERT_GAP_S = 60 * float(B.BRAIN.get("alert_gap_minutes", 20))
+AT_LIMIT_QUIET_S = 60 * float(B.BRAIN.get("quiet_at_limit_minutes", 10))
+BIN = os.path.dirname(os.path.realpath(__file__))
+LOGFILE = os.path.join(B.LOGS_DIR, "brainwatch.log")
+DUE = os.path.join(B.BRAIN_DIR, "TAKEOVER_DUE.md")
+PROJECT = B.CFG.get("project", "project")
+
+DRY = "--dry-run" in sys.argv or "--explain" in sys.argv
+EXPLAIN = "--explain" in sys.argv
+TEST = bool(os.environ.get("KIT_BRAIN_DIR"))   # a test folder: never notify or pause for real
+
+
+def log(msg):
+    print("%s %s%s" % (B.iso(B.now()), "[dry-run] " if DRY else "", msg), flush=True)
+
+
+def tool_env():
+    env = {k: v for k, v in os.environ.items() if not (k.startswith("CLAUDE") or k.startswith("KIT_"))}
+    env["PATH"] = ":".join([BIN, os.path.join(os.path.expanduser("~"), ".local", "bin"), "/opt/homebrew/bin",
+                            "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"])
+    return env
+
+
+def screens():
+    fake = os.environ.get("KIT_SCREENS")
+    if fake is not None:
+        return set(s.strip() for s in fake.split(",") if s.strip())
+    try:
+        out = subprocess.run(["screen", "-ls"], capture_output=True, text=True, timeout=10, env=tool_env()).stdout
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    return set(re.findall(r"^\s*\d+\.(\S+)\s", out, re.M))
+
+
+def rotate_log():
+    try:
+        if os.path.getsize(LOGFILE) > 2 * 1024 * 1024:
+            os.replace(LOGFILE, LOGFILE + ".1")
+    except OSError:
+        pass
+
+
+def notify(text):
+    if DRY or TEST:
+        if TEST and not DRY:
+            log("(notification skipped in a test: %s)" % text)
+        return
+    title = "%s brain" % PROJECT
+    try:
+        if platform.system() == "Darwin":
+            subprocess.run(["osascript", "-e", 'display notification "%s" with title "%s"'
+                            % (text.replace('"', "'"), title.replace('"', "'"))], timeout=10, capture_output=True)
+        else:
+            subprocess.run(["notify-send", title, text], timeout=10, capture_output=True)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def takeover_command(new, holder, hsid, reason, t):
+    prompt = ("BRAIN TAKEOVER (%s): you are now the %s brain on account %s, taking over from %s (session %s): "
+              "%s. Read %s now and follow it step by step."
+              % (time.strftime("%H:%M", time.localtime(t)), PROJECT, new, holder, (hsid or "")[:8], reason,
+                 os.path.join(B.BRAIN_DIR, "TAKEOVER.md")))
+    prefix = B.BRAIN.get("launch_prefix", "")
+    if prefix and platform.system() != "Darwin" and "caffeinate" in prefix:
+        prefix = ""
+    return ("%s cca %s %s" % (prefix, new, shlex.quote(prompt))).strip()
+
+
+def run_pause_command():
+    cmd = B.BRAIN.get("pause_command") or []
+    if not cmd:
+        log("no brain.pause_command configured: nothing else to pause")
+        return
+    if TEST:
+        log("(pause command skipped in a test: %s)" % " ".join(cmd))
+        return
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=tool_env())
+        log("%s -> exit %d %s" % (" ".join(cmd), r.returncode, (r.stdout + r.stderr).strip().splitlines()[-1:]))
+    except (OSError, subprocess.SubprocessError) as e:
+        log("pause command failed: %s" % e)
+
+
+def write_paused(t, holder, reason, skipped):
+    lines = ["# %s PAUSED: every account is at its cap (%s)" % (PROJECT, B.iso(t)), "",
+             "brainwatch found no account that may be the brain (pause rule).",
+             "Brain was %s: %s." % (holder, reason), "", "Accounts:"]
+    lines += ["- %s: %s" % (a, why) for a, why in skipped]
+    lines += ["", "Resume only on the owner's command: `brainwatch --resume`, then start a brain and resume the "
+              "paused jobs with a RESUMED note per step."]
+    if DRY:
+        log("would write %s and run the pause command" % B.PAUSED)
+        return
+    os.makedirs(B.BRAIN_DIR, exist_ok=True)
+    with open(B.PAUSED, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    run_pause_command()
+
+
+def main():
+    if "--resume" in sys.argv:
+        if os.path.exists(B.PAUSED):
+            os.replace(B.PAUSED, B.PAUSED + ".done")
+            st = B.load_json(B.STATE) or {}
+            st.pop("paused_at", None)
+            B.save_json(B.STATE, st)
+            B.activity({"dir": "send", "to": "brain", "kind": "brain resume", "what": "owner cleared the pause"})
+            print("pause cleared (PAUSED.md -> PAUSED.md.done)")
+        else:
+            print("not paused")
+        return 0
+    if not DRY:
+        os.makedirs(B.LOGS_DIR, exist_ok=True)
+        rotate_log()
+    t = B.now()
+    state = B.load_json(B.STATE) or {}
+    if os.path.exists(B.PAUSED):
+        log("PAUSED (every account at its cap, %s): waiting for the owner's `brainwatch --resume`" % B.PAUSED)
+        return 0
+    lease = B.read_lease()
+    st, age, alive = B.lease_state(lease, t)
+    if EXPLAIN:
+        for a in B.ACCOUNTS:
+            u = B.usage(a, t)
+            log("  %-8s %s; limit: %s; headroom %.1f" % (a, B.summary(u), B.at_limit(u, t) or "none",
+                                                         B.headroom(u, t)))
+    if st in ("none", "released"):
+        log(B.describe(lease, t) + ": nothing to do")
+        return 0
+    holder, hsid = lease.get("account"), lease.get("session_id")
+    lim = B.at_limit(B.usage(holder, t), t)
+    mins = int(age // 60)
+    reason = None
+    if st == "stale":
+        reason = "%s brain quiet %d min and its session is gone" % (holder, mins)
+    elif lim and age >= AT_LIMIT_QUIET_S:
+        reason = "%s at its limit (%s), quiet %d min" % (holder, lim, mins)
+    if not reason:
+        extra = ("; at its limit (%s) but used a tool %d min ago: waiting" % (lim, mins)) if lim else ""
+        log("ok: " + B.describe(lease, t) + extra)
+        if not DRY and os.path.exists(DUE):
+            os.replace(DUE, DUE + ".done")
+        return 0
+
+    last = state.get("last_alert") or 0
+    if t - last < ALERT_GAP_S and state.get("last_alert_session") == hsid:
+        log("takeover due (%s); alert already given %d min ago (%s)" % (reason, int((t - last) // 60), DUE))
+        return 0
+
+    running = screens()
+    cands, skipped = [], []
+    for a in B.ACCOUNTS:
+        u = B.usage(a, t)
+        why = None
+        if a == holder:
+            why = "the account that just failed"
+        elif not os.path.isdir(os.path.join(B.ACCOUNTS_DIR, a)):
+            why = "no account folder"
+        elif ("brain-" + a) in running:
+            why = "screen brain-%s already running" % a
+        else:
+            why = B.at_limit(u, t)
+            if not why and B.headroom(u, t) <= 0:
+                why = "no headroom left (%s)" % B.summary(u)
+        if why:
+            skipped.append((a, why))
+        else:
+            cands.append((u["fh"] < 80.0, B.headroom(u, t), a, u))
+    cands.sort(key=lambda c: (c[0], c[1]), reverse=True)
+    for a, why in skipped:
+        log("  skip %s: %s" % (a, why))
+
+    if not cands:
+        msg = "every account at its cap: PAUSE (brain was %s: %s)" % (holder, reason)
+        log(msg)
+        write_paused(t, holder, reason, skipped)
+        if not DRY:
+            state["paused_at"] = t
+            B.save_json(B.STATE, state)
+            B.activity({"dir": "send", "to": "brain", "kind": "brain pause", "what": msg})
+            notify("All accounts at their caps: %s paused" % PROJECT)
+        return 0
+
+    _, room, new, nu = cands[0]
+    full = "brain takeover due %s -> %s: %s" % (holder, new, reason)
+    cmd = takeover_command(new, holder, hsid, reason, t)
+    log("%s (%s: %s, headroom %.0f)" % (full, new, B.summary(nu), room))
+    log("owner command: " + cmd)
+    if DRY:
+        log("would write %s, notify the owner and append the activity line" % DUE)
+        return 0
+    others = "; ".join("%s %s" % (c[2], B.summary(c[3])) for c in cands[1:]) or "none"
+    os.makedirs(B.BRAIN_DIR, exist_ok=True)
+    with open(DUE, "w", encoding="utf-8") as f:
+        f.write("# Brain takeover due (%s)\n\n%s.\n\nRun in a terminal (or `screen -dmS brain-%s` + it, "
+                "to keep it after the window closes):\n\n    %s\n\nPick: %s (%s, headroom %.0f). Other "
+                "candidates: %s. Skipped: %s.\n" % (B.iso(t), full, new, cmd, new, B.summary(nu), room, others,
+                                                   "; ".join("%s (%s)" % s for s in skipped)))
+    hist = (state.get("history") or [])[-19:]
+    hist.append({"t": t, "iso": B.iso(t), "from": holder, "to": new, "reason": reason})
+    state.update(last_alert=t, last_alert_session=hsid, history=hist)
+    B.save_json(B.STATE, state)
+    B.activity({"dir": "send", "to": "owner", "kind": "brain takeover due", "what": full})
+    notify("Brain takeover due: %s -> %s (see TAKEOVER_DUE.md)" % (holder, new))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

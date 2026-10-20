@@ -1,0 +1,40 @@
+{
+  "model": "opus",
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "opus",
+    "AGENT_KIT_HOME": "__KIT_HOME__"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"__KIT_REPO__/hooks/statusline.py\"",
+    "refreshInterval": 60
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Write|Edit|MultiEdit|NotebookEdit|Glob|Grep|Bash",
+        "hooks": [
+          {"type": "command", "command": "python3 \"__KIT_REPO__/hooks/path_guard.py\"", "timeout": 15}
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(cca list)",
+      "Bash(brainlease who)",
+      "Bash(brainlease status)",
+      "Read(//__KIT_HOME_NOSLASH__/team/**)",
+      "Edit(//__KIT_HOME_NOSLASH__/team/**)"
+    ],
+    "deny": [
+      "Read(//__KIT_HOME_NOSLASH__/secrets/**)",
+      "Edit(//__KIT_HOME_NOSLASH__/secrets/**)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git stash *)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)"
+    ]
+  }
+}

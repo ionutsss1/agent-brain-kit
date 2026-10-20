@@ -1,0 +1,19 @@
+{
+  "_comment": "Board settings embedded into board.html by board/build.py. Tabs: media and goals on, 3D off.",
+  "title": "Task Board",
+  "eyebrow": "Example Project tickets",
+  "intro": "Every task for the project, from the owner's decisions. Move work forward, set its priority, and leave a clear handoff for the next session.",
+  "focusTrack": "Platform",
+  "tabs": {"media": true, "goals": true, "3d": false},
+  "assignees": [
+    {"value": "main · worker", "label": "Main · worker"},
+    {"value": "second · worker", "label": "Second · worker"},
+    {"value": "shared · worker", "label": "Shared · worker"},
+    {"value": "Codex", "label": "Codex"},
+    {"value": "API key", "label": "API key (paid)"},
+    {"value": "main · brain", "label": "The brain itself"}
+  ],
+  "goalGroups": ["vision", "goal order", "milestones", "systems"],
+  "modelGroups": ["Buildings", "Characters", "Props", "Details"],
+  "storageKey": "example-task-board-view-v1"
+}

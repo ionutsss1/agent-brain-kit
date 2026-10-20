@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""apijob - run ONE Claude Code job on the paid API-key account, capped per job and in total, and log its cost.
+
+  apijob <label> <log.jsonl> [claude -p args...]   run the job (prompt and flags go after the log path)
+  apijob --total                                   print the spent total and the cap
+  apijob --dry-run <label> <log.jsonl> [args...]   check the caps and print the command; run nothing
+
+Rules (from the kit config, section "api_jobs"):
+  - refuses to start when the logged total + this job's cap would pass total_usd
+  - every job runs with --max-budget-usd per_job_usd (APIJOB_CAP may set it lower, never higher)
+  - after the job: appends {time, label, cost_usd, log} to <paths.ledger>/<ledger_file> and prints the total.
+    A job stopped before its result line is booked from its token usage (estimate_usd_per_mtok x
+    estimate_factor), so the ledger never books 0 for a job that ran.
+The API key itself is never read here: the api-key account's own Claude Code login holds it (see docs).
+Exit codes: the job's own; 2 usage error; 3 refused by the cap.
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+
+BIN = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, BIN)
+import kitconfig as K  # noqa: E402
+
+CFG = K.load()
+API = CFG.get("api_jobs", {})
+ACCOUNT = API.get("account", "api")
+TOTAL_CAP = float(API.get("total_usd", 100))
+JOB_CAP = min(float(API.get("per_job_usd", 15)), float(os.environ.get("APIJOB_CAP") or 1e9))
+LEDGER = os.path.join(os.environ.get("KIT_LEDGER") or K.path("ledger", CFG), API.get("ledger_file", "api_spend.jsonl"))
+PRICES = API.get("estimate_usd_per_mtok") or {"input": 5, "output": 25, "cache_read": 0.5, "cache_write": 6.25}
+FACTOR = float(API.get("estimate_factor", 1.4))
+
+
+def total():
+    t = 0.0
+    try:
+        with open(LEDGER, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    t += float(json.loads(line).get("cost_usd", 0))
+                except (ValueError, AttributeError):
+                    pass
+    except OSError:
+        pass
+    return t
+
+
+def cost_from_log(path):
+    """The result line's total_cost_usd, else an estimate from the assistant messages' token usage."""
+    cost, seen, est = None, set(), 0.0
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if '"total_cost_usd"' in line:
+                    try:
+                        cost = float(json.loads(line).get("total_cost_usd", cost))
+                    except (ValueError, TypeError):
+                        pass
+                elif '"type":"assistant"' in line:
+                    try:
+                        m = json.loads(line)["message"]
+                    except (ValueError, KeyError):
+                        continue
+                    if m.get("id") in seen:
+                        continue
+                    seen.add(m.get("id"))
+                    u = m.get("usage") or {}
+                    est += (u.get("input_tokens", 0) * PRICES["input"] + u.get("output_tokens", 0) * PRICES["output"]
+                            + u.get("cache_read_input_tokens", 0) * PRICES["cache_read"]
+                            + u.get("cache_creation_input_tokens", 0) * PRICES["cache_write"]) / 1e6
+    except OSError:
+        pass
+    return cost if cost is not None else est * FACTOR
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0 if argv else 2
+    if argv[0] == "--total":
+        print("%s spent $%.2f of $%.0f" % (ACCOUNT, total(), TOTAL_CAP))
+        return 0
+    dry = argv[0] == "--dry-run"
+    if dry:
+        argv = argv[1:]
+    if len(argv) < 3:
+        print("usage: apijob [--dry-run] <label> <log.jsonl> [claude -p args...]", file=sys.stderr)
+        return 2
+    label, log, rest = argv[0], argv[1], argv[2:]
+    spent = total()
+    if spent + JOB_CAP > TOTAL_CAP:
+        print("apijob REFUSED: spent $%.2f + this job's cap $%.2f would pass $%.0f" % (spent, JOB_CAP, TOTAL_CAP))
+        return 3
+    cmd = [os.path.join(BIN, "cca"), ACCOUNT, "-p", "--max-budget-usd", "%g" % JOB_CAP,
+           "--output-format", "stream-json", "--verbose"] + rest
+    if dry:
+        print("apijob dry run: would run %s > %s (spent $%.2f, cap per job $%.2f, total cap $%.0f)"
+              % (" ".join(cmd[:8]) + " ...", log, spent, JOB_CAP, TOTAL_CAP))
+        return 0
+    os.makedirs(os.path.dirname(os.path.abspath(log)), exist_ok=True)
+    with open(log, "w", encoding="utf-8") as out, open(os.devnull) as devnull:
+        rc = subprocess.call(cmd, stdout=out, stderr=subprocess.STDOUT, stdin=devnull,
+                             cwd=K.path("team", CFG) if os.path.isdir(K.path("team", CFG)) else None)
+    cost = cost_from_log(log)
+    os.makedirs(os.path.dirname(LEDGER), exist_ok=True)
+    with open(LEDGER, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"time": time.strftime("%Y-%m-%d %H:%M"), "label": label, "cost_usd": round(cost, 4),
+                            "log": log}) + "\n")
+    print("apijob %s exit %d cost $%.4f; %s spent $%.2f of $%.0f" % (label, rc, cost, ACCOUNT, total(), TOTAL_CAP))
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

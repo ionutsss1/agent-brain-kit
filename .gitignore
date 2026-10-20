@@ -1,0 +1,13 @@
+# local config and run-time state never go into the repo
+config/kit.json
+secrets/
+*.key
+.env
+.env.*
+ledger/
+logs/
+board/dist/
+board/seed.json
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,71 @@
+{
+  "tracks": [
+    {"id": "platform", "title": "Platform"},
+    {"id": "docs", "title": "Docs"},
+    {"id": "ops", "title": "Ops"}
+  ],
+  "tasks": [
+    {
+      "id": "EX01",
+      "track": "platform",
+      "title": "Add a health check endpoint",
+      "status": "next",
+      "why": "Summary (2026-01-05, planning notes): the deploy script needs a cheap way to know the service is up.",
+      "why_source": "notes/planning.md, section 2",
+      "how": ["Write a failing test for GET /health", "Return 200 with the build id", "Run the full test suite"],
+      "done_means": "GET /health returns 200 and the build id; the test suite passes.",
+      "depends_on": [],
+      "last_progress": "2026-01-05 card written",
+      "open_questions": []
+    },
+    {
+      "id": "EX02",
+      "track": "platform",
+      "title": "Cache the settings lookup",
+      "status": "doing",
+      "why": "Summary (2026-01-06): settings are read on every request; profiling shows it is the slowest step.",
+      "why_source": "notes/profile_2026-01-06.md",
+      "how": ["Measure the baseline", "Add a 60 s cache with explicit invalidation", "Measure again"],
+      "done_means": "p95 request time drops; no stale settings after an update (test proves it).",
+      "depends_on": ["EX01"],
+      "last_progress": "2026-01-07 baseline measured",
+      "open_questions": []
+    },
+    {
+      "id": "EX03",
+      "track": "docs",
+      "title": "Write the onboarding guide",
+      "status": "waiting-owner",
+      "why": "Summary (2026-01-06): new people need one page that gets them to a running setup.",
+      "how": ["Draft the steps", "Have a fresh session follow them", "Fix every step that failed"],
+      "done_means": "A fresh session follows the guide to a working setup without help.",
+      "depends_on": [],
+      "last_progress": "2026-01-07 draft ready",
+      "open_questions": ["Should the guide cover the optional remote runner, or only the core kit?"]
+    },
+    {
+      "id": "EX04",
+      "track": "ops",
+      "title": "Rotate the runner key",
+      "status": "paused",
+      "why": "Summary (2026-01-04): keys are rotated every quarter.",
+      "how": ["Owner creates the new key file", "Restart the daemon", "Check a ping"],
+      "done_means": "ping works with the new key; the old key is refused.",
+      "depends_on": [],
+      "last_progress": "2026-01-04 paused until the quarter ends",
+      "open_questions": []
+    },
+    {
+      "id": "EX05",
+      "track": "ops",
+      "title": "Set up the nightly backup check",
+      "status": "done",
+      "why": "Summary (2026-01-02): a backup nobody restores is not a backup.",
+      "how": ["Restore last night's backup into a scratch folder", "Compare checksums", "Report the result"],
+      "done_means": "The check runs nightly and reports a pass or a clear failure.",
+      "depends_on": [],
+      "last_progress": "2026-01-03 done, first report passed",
+      "open_questions": []
+    }
+  ]
+}

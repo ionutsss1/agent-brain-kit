@@ -1,0 +1,157 @@
+#!/bin/bash
+# cca <account> [claude args]   start Claude Code signed in as one of the kit's accounts
+# cca list                      accounts with their usage ledger line, cap, pace and daily allowance
+# cca help                      this text
+#
+# Each account has its own folder <paths.accounts>/<account> (CLAUDE_CONFIG_DIR: login, settings,
+# transcripts, auto memory). Sessions start in <paths.team> so the team CLAUDE.md and memory load;
+# set KIT_CC_HERE=1 to stay in the current folder instead.
+# Accounts come from the kit config (config/kit.json, see bin/kitconfig.py). bash 3.2 compatible.
+# Named cca (not cc) so it never shadows the C compiler.
+
+BIN="$(cd "$(dirname "$0")" 2>/dev/null && pwd -P)"
+
+kit() {  # kit <expr>: print one value from the kit config
+  python3 - "$BIN" "$1" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1])
+import kitconfig as K
+cfg = K.load()
+expr = sys.argv[2]
+if expr == "names":
+    print(" ".join(K.account_names(cfg, None)))
+elif expr == "kit_home":
+    print(cfg["kit_home"])
+else:
+    print(K.path(expr, cfg))
+PY
+}
+
+usage() {
+  cat <<'EOF'
+cca <account> [claude args]   start Claude Code as one of the kit's accounts
+cca list                      show the accounts and their usage ledger
+examples:
+  cca main                         interactive session (first time: sign in with /login)
+  caffeinate -i cca main --remote-control
+  cca second -p "say ok"
+EOF
+}
+
+list_accounts() {
+  python3 - "$BIN" <<'PY'
+import glob, json, os, sys, time
+sys.path.insert(0, sys.argv[1])
+import brainlib as B
+import kitconfig as K
+now = time.time()
+def when(ts):
+    if not isinstance(ts, (int, float)):
+        return "?"
+    fmt = "%H:%M" if ts - now < 20 * 3600 else "%a %d %b %H:%M"
+    return time.strftime(fmt, time.localtime(ts))
+for a in K.accounts(B.CFG, None):
+    name = a["name"]
+    if a.get("kind", "claude") != "claude":
+        print("%-8s %s: %s" % (name, a.get("kind"), a.get("role", "")))
+        continue
+    if not os.path.isdir(os.path.join(B.ACCOUNTS_DIR, name)):
+        print("%-8s no folder (run setup.sh)" % name)
+        continue
+    u = B.usage(name)
+    bits = []
+    if u["known"]:
+        bits.append("5h %d%% (resets %s)" % (round(u["fh"]), when(u["fh_reset"])))
+        bits.append("week %d%% of cap %d%% (resets %s)" % (round(u["wk"]), B.cap(name), when(u["wk_reset"])))
+        if u["pace"] is not None:
+            bits.append("pace %d%%" % round(u["pace"]))
+        d = B.daily_allowance(u)
+        if d is not None:
+            bits.append("today may use ~%d points" % round(d))
+        if u.get("age_min") is not None:
+            bits.append("updated %d min ago" % u["age_min"])
+    else:
+        bits.append("no usage numbers yet (sign in, then answer one prompt)")
+    lim = B.at_limit(u)
+    print("%-8s %s%s; %s" % (name, "; ".join(bits), ("; AT LIMIT: " + lim) if lim else "", a.get("role", "")))
+# Codex CLI: the newest session file holds its last rate-limit reading
+sess = sorted(glob.glob(os.path.expanduser("~/.codex/sessions/*/*/*/*.jsonl")), key=os.path.getmtime)
+rl, seen = None, None
+for p in reversed(sess[-20:]):
+    try:
+        for line in open(p, encoding="utf-8", errors="replace"):
+            if '"rate_limits"' in line:
+                try:
+                    d = json.loads(line)
+                except ValueError:
+                    continue
+                stack = [d]
+                while stack:
+                    x = stack.pop()
+                    if isinstance(x, dict):
+                        if isinstance(x.get("rate_limits"), dict):
+                            rl = x["rate_limits"]
+                        stack.extend(x.values())
+                    elif isinstance(x, list):
+                        stack.extend(x)
+        if rl:
+            seen = os.path.getmtime(p)
+            break
+    except OSError:
+        pass
+if rl:
+    bits = []
+    for key, label in (("primary", "5h"), ("secondary", "week")):
+        w = rl.get(key) or {}
+        if "used_percent" in w:
+            gone = isinstance(w.get("resets_at"), (int, float)) and w["resets_at"] < now
+            bits.append("%s %s" % (label, "0% (window reset)" if gone else "%d%%" % round(w["used_percent"])))
+    bits.append("as of its last run %d min ago" % max(0, int((now - seen) // 60)))
+    print("%-8s %s; one review per phase" % ("codex", "; ".join(bits)))
+else:
+    print("codex    no usage numbers yet (or Codex CLI not installed)")
+PY
+}
+
+case "${1:-}" in
+  ""|help|-h|--help)
+    usage
+    [ -z "${1:-}" ] && exit 2
+    exit 0
+    ;;
+  list)
+    list_accounts
+    ;;
+  *)
+    acct="$1"; shift
+    names="$(kit names)" || exit 2
+    case " $names " in
+      *" $acct "*) ;;
+      *) echo "cca: unknown account '$acct' (accounts: $names)" >&2; exit 2 ;;
+    esac
+    dir="$(kit accounts)/$acct"
+    if [ ! -d "$dir" ]; then
+      echo "cca: $dir is missing; run setup.sh first" >&2
+      exit 1
+    fi
+    if ! command -v claude >/dev/null 2>&1; then
+      for d in "$HOME/.local/bin" "$HOME/.claude/local" /opt/homebrew/bin /usr/local/bin; do
+        if [ -x "$d/claude" ]; then PATH="$d:$PATH"; export PATH; break; fi
+      done
+    fi
+    if ! command -v claude >/dev/null 2>&1; then
+      echo "cca: claude is not installed or not on PATH (see the Claude Code install docs)" >&2
+      exit 127
+    fi
+    export CLAUDE_CONFIG_DIR="$dir"
+    export AGENT_KIT_HOME="${AGENT_KIT_HOME:-$(kit kit_home)}"
+    team="$(kit team)"
+    if [ -z "${KIT_CC_HERE:-}" ] && [ -d "$team" ]; then
+      case "$(pwd -P)" in
+        "$(cd "$team" && pwd -P)"*) ;;
+        *) cd "$team" || exit 1 ;;
+      esac
+    fi
+    exec claude "$@"
+    ;;
+esac

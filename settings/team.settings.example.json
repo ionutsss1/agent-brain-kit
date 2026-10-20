@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent|Task|Workflow|SendMessage|Bash",
+        "hooks": [
+          {"type": "command", "command": "python3 \"__KIT_REPO__/hooks/activity_log.py\"", "timeout": 10, "async": true}
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {"type": "command", "command": "python3 \"__KIT_REPO__/hooks/brain_hook.py\" --renew", "timeout": 10, "async": true}
+        ]
+      },
+      {
+        "matcher": "Workflow|TaskStop|CronCreate|Artifact|Bash",
+        "hooks": [
+          {"type": "command", "command": "python3 \"__KIT_REPO__/hooks/brain_hook.py\" --guard", "timeout": 5}
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent|Task|Workflow|SendMessage|Bash",
+        "hooks": [
+          {"type": "command", "command": "python3 \"__KIT_REPO__/hooks/activity_log.py\"", "timeout": 10, "async": true}
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {"type": "command", "command": "python3 \"__KIT_REPO__/hooks/activity_log.py\"", "timeout": 10},
+          {"type": "command", "command": "python3 \"__KIT_REPO__/hooks/brain_hook.py\"", "timeout": 10}
+        ]
+      }
+    ]
+  }
+}

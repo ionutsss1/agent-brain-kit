@@ -1,0 +1,12 @@
+{
+  "_comment": "Settings for ws_daemon.py on the remote machine. Classes: slots = jobs at once; pausable = held while a pause switch is on; killable = ws kill may stop it.",
+  "shell": ["bash", "-lc"],
+  "default_cwd": null,
+  "keep_days": 7,
+  "classes": {
+    "light": {"slots": 4, "pausable": false, "killable": true},
+    "heavy": {"slots": 1, "pausable": true, "killable": true},
+    "build": {"slots": 1, "pausable": true, "killable": false},
+    "film":  {"slots": 2, "pausable": true, "killable": true}
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "_comment": "Copy to config/kit.json (or set AGENT_KIT_CONFIG) and edit. No keys or passwords in this file.",
+  "project": "Example Project",
+  "owner_name": "the owner",
+  "kit_home": "~/agent-brain-kit-home",
+  "paths": {
+    "team": "{kit_home}/team",
+    "brain": "{kit_home}/team/brain",
+    "activity": "{kit_home}/team/activity/activity.jsonl",
+    "accounts": "{kit_home}/accounts",
+    "ledger": "{kit_home}/ledger",
+    "logs": "{kit_home}/logs",
+    "secrets": "{kit_home}/secrets"
+  },
+  "accounts": [
+    {"name": "main", "kind": "claude", "role": "brain and workers", "cap_percent": 95, "week_reset": "Tue 10:00"},
+    {"name": "second", "kind": "claude", "role": "workers; brain while main rests", "cap_percent": 95, "week_reset": "Tue 18:00"},
+    {"name": "shared", "kind": "claude", "role": "reviews; fallback when the others run out", "cap_percent": 40,
+     "week_reset": "Sat 10:00", "fallback": true,
+     "cap_schedule": [{"until": "2099-01-01T00:00", "cap": 40}]},
+    {"name": "api", "kind": "api-key", "role": "paid API jobs, capped per job and in total"}
+  ],
+  "api_jobs": {
+    "account": "api",
+    "per_job_usd": 15,
+    "total_usd": 100,
+    "ledger_file": "api_spend.jsonl",
+    "estimate_usd_per_mtok": {"input": 5, "output": 25, "cache_read": 0.5, "cache_write": 6.25},
+    "estimate_factor": 1.4
+  },
+  "brain": {
+    "stale_minutes": 15,
+    "quiet_at_limit_minutes": 10,
+    "alert_gap_minutes": 20,
+    "five_hour_limit": 98,
+    "launch_prefix": "caffeinate -i",
+    "pause_command": [],
+    "job_command_patterns": ["\\bapijob\\b", "\\bsafe_stop\\b"]
+  },
+  "runner": {
+    "name": "ws",
+    "verbs": ["run", "kill", "pause", "resume"]
+  },
+  "guard": {
+    "secret_paths": ["{kit_home}/secrets", "~/.ssh"],
+    "secret_basename_patterns": ["^\\.env(\\..*)?$", "\\.key$", "\\.pem$", "^secrets\\..*", "^\\.credentials\\.json$"],
+    "no_write_paths": [],
+    "secret_words": ["\\.env\\b", "\\.pem\\b", "secrets\\.", "\\.credentials\\.json", "id_rsa", "id_ed25519", "\\.ssh/"],
+    "forbidden_commands": [
+      {"regex": "\\bgit\\b[^\\n;&|]*?\\s(commit|push|stash|reset|checkout|switch|restore)\\b",
+       "reason": "Owner rule: no git writes. Read-only git (status, diff, log) is fine."},
+      {"regex": "\\brm\\s+-[a-zA-Z]*r[a-zA-Z]*f?\\s+/(\\s|$)", "reason": "Never delete from the root folder."}
+    ],
+    "path_map": [],
+    "remote_only_prefixes": [],
+    "mount_sentinel": "",
+    "max_search_depth_on_mount": 2
+  },
+  "mcp": {
+    "allowed_read_roots": ["{kit_home}/team"],
+    "forbidden_words": ["owner-account", "production-db"],
+    "checks": {
+      "python_version": ["python3", "--version"],
+      "disk_free": ["df", "-h", "."]
+    }
+  }
+}

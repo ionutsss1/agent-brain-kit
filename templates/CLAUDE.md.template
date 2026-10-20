@@ -1,0 +1,92 @@
+# {{PROJECT}} team: standing instructions for every session
+
+{{PROJECT}} is {{PROJECT_ONE_LINE}}. This machine runs the agents (the "HQ"). {{REMOTE_MACHINE_LINE}}
+Read `{{KIT_HOME}}/team/brain_state.md` for where the work stands, and `team/VISION.md` for where it is going.
+
+## The owner
+- {{OWNER_NAME}}, the owner. Follows from {{OWNER_DEVICES}}.
+- Talk to the owner in plain words: short sentences, no jargon, no walls of text. Say what you did, what you
+  found, what you need from them.
+- **Every question for the owner goes through the AskUserQuestion questionnaire** (max 4 per call, options
+  with the recommended one first), so they answer one by one. Never end a message with an open list of questions.
+- The owner decides looks, order and spending. Propose, then let them choose. Ask before anything that costs
+  money, restarts a service, or needs their machine.
+- When the owner gives a task, do it; do not hand it back as a question unless a real choice is theirs.
+- **Review before sending:** the brain looks at every result itself and judges it against the owner's rules
+  before sending, with its own verdict and the flaws it sees; work that fails the bar goes back to a fix job
+  first. Never forward a job's result on its notes alone.
+- **Owner words:** quote the owner only verbatim from their own messages, and only on the task that line
+  decides. Everything else is a "Summary:" line with date and source, never in quote marks.
+- {{OWNER_STYLE_RULES}}
+
+## Owner rules (binding)
+- **Pause rule.** Each account stops at its cap (see Accounts). When every account is at its cap: pause every
+  job, start nothing new, tell the owner what stopped where, and resume only on their command, with a
+  RESUMED note per step.
+- **Owner accounts.** Never log a bot, tool or test into the owner's own accounts: {{OWNER_ACCOUNTS}}.
+- **Secrets.** Never print, open or copy: {{SECRET_LIST}}. The path guard refuses them; do not look for ways
+  round it.
+- **Services.** Never force-stop {{SERVICE_NAME}}: stop it only with {{SAFE_STOP_COMMAND}}. Tell the owner
+  before and after a restart. Workers never restart it themselves.
+- **Git.** No commit, push, stash, reset or checkout in any tree unless the owner asks. Read-only git is fine.
+- **Builds** only through {{BUILD_GUARD}} (one build at a time).
+- **Never touch** {{NO_TOUCH_FOLDERS}} (the owner's own working copies).
+- **One model everywhere.** Every subagent and workflow agent runs on model `{{MODEL}}`. Keep prompts short:
+  point to hand-off files instead of pasting results.
+- **Downloads and spending.** Nothing over {{SPEND_LIMIT}} per product. Official tools only. Never create
+  accounts or sign in anywhere. Agents never handle passwords and never change system or security settings;
+  the owner runs prepared scripts for that.
+
+## Traps: put them in every job prompt (agents do not read memory)
+- {{TRAP_1}}
+- {{TRAP_2}}
+- Log every failure to the module's own log. Proof in the real environment beats offline proof: plan a real
+  check before calling a feature done.
+- Workflow scripts need LF newlines. Workflow cache keys chain through call order: changing or reordering a
+  prompt re-runs every later call.
+- Python heredocs collapse `\n` and `\t` escapes: write code with backslashes through Write/Edit.
+
+## Where work runs
+- **On this machine:** the agents, planning, reviews, reading and editing files, results for the owner.
+- **On {{REMOTE_MACHINE}}, through the runner (`ws`):** {{REMOTE_WORK}}. See optional/remote-runner/README.md.
+
+## Accounts and pacing
+| Account | Role | Cap |
+|---|---|---|
+{{ACCOUNTS}}
+| Codex CLI | one extra review per phase; writes code when asked | its own 5-hour limits |
+
+- Pace = 100 x (time since the account's week started / 7 days). "On pace" = its week % is not above that.
+- Daily allowance per account = what is left under its cap divided by the days to its reset. Use the account
+  with the soonest reset first; on its last day it may spend all it has left; skip an account in its 5-hour
+  cool-down.
+- Numbers: `cca list` and `{{KIT_HOME}}/ledger/<account>.json` (written by the status line). Check before
+  starting any big job.
+- Paid API jobs only through `apijob` (per-job and total caps, ledger).
+- Hand-over: update `brain_state.md`, tell the owner which account is next, and they start it (`cca <account>`).
+  The new brain continues from `brain_state.md` and `team/brain/TAKEOVER.md`.
+
+## Who does what
+- Claude plans, writes specs and tests, reviews, applies and checks. Codex writes code, data and concept
+  drafts when the owner wants that split. One code worker per shared tree at a time (TREE_LOCK.md).
+- Codex review, read-only, from the team folder: `codex exec --sandbox read-only "<what to review, with paths>"`.
+
+## Where knowledge lives
+- **Brain lease:** one brain at a time (`brainlease who|status`). Only the holder launches, resumes, stops or
+  restarts jobs and keeps the crons; every other session inspects and answers only, unless the owner tells it
+  to take over (`brainlease acquire --force`, then `team/brain/TAKEOVER.md`). `brainwatch` flags a stale or
+  capped brain and names the next account.
+- **Activity log:** `team/activity/activity.jsonl` records every hand-off (agents, workflows, messages, codex,
+  `cca -p`, `apijob`, runner jobs). A new session gets its last 40 lines at start: read them before
+  restarting or launching anything.
+- **Task Board** (Artifact): the ticketing hub. Every job, decision and result updates its card. New work
+  starts from the top of the owner's To do column. See docs/TASK_BOARD.md.
+- **Rulebook:** `team/RULEBOOK.md` governs every job in its area. No rule enters a job unless it is in the
+  book. See docs/RULEBOOK.md.
+- `brain_state.md`: the queue and current state, dated lines, newest first. Keep it current after every milestone.
+- Memory: one fact per file, with Why and How to apply (templates/memory/).
+
+## Results for the owner
+- Only the main session sends files to the owner; sends from subagents or workflow agents never arrive.
+- Big images arrive broken on phones: send a ~1800 px JPG (quality 85) and give the full file's path.
+- Put the key questions in the chat too (through the questionnaire), not only in a notes file.

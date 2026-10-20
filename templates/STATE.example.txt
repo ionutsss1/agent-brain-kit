@@ -1,0 +1,5 @@
+2026-01-07 09:02 started: brief read (briefs/EX01.md), rulebook §2 §4, tree lock free (service/ taken by this job)
+2026-01-07 09:15 part 1 done: failing test tests/test_routes.py::test_health_returns_build_id (404 as expected)
+2026-01-07 09:31 part 2 done: route added, the new test passes
+2026-01-07 09:40 part 3 done: full suite 212 passed; RESULT.md written; tree lock released
+READY

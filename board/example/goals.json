@@ -1,0 +1,45 @@
+{
+  "generated": "2026-01-07",
+  "now": "Make the service observable, then speed up the hot path.",
+  "goals": [
+    {
+      "id": "goal-observable",
+      "title": "Observable service",
+      "group": "goal order",
+      "status": "active",
+      "progress": null,
+      "why": "Summary (2026-01-05): we cannot fix what we cannot see.",
+      "where_we_are": "The health check is the next card.",
+      "cards": ["EX01", "EX05"],
+      "decisions": [{"date": "2026-01-05", "text": "Summary: health check first, metrics later.", "source": "notes/planning.md"}],
+      "subgoals": [{"title": "Health check", "status": "next", "cards": ["EX01"]}],
+      "sources": ["notes/planning.md"]
+    },
+    {
+      "id": "goal-fast",
+      "title": "Fast hot path",
+      "group": "goal order",
+      "status": "next",
+      "progress": null,
+      "why": "Summary (2026-01-06): requests are slower than the target.",
+      "where_we_are": "Baseline measured.",
+      "cards": ["EX02"],
+      "decisions": [],
+      "subgoals": [],
+      "sources": ["notes/profile_2026-01-06.md"]
+    },
+    {
+      "id": "goal-people",
+      "title": "Easy onboarding",
+      "group": "vision",
+      "status": "later",
+      "progress": null,
+      "why": "Summary: new people should be useful on day one.",
+      "where_we_are": "Draft guide waits for an owner decision.",
+      "cards": ["EX03", "EX04"],
+      "decisions": [],
+      "subgoals": [],
+      "sources": []
+    }
+  ]
+}
